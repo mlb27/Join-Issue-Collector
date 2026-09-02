@@ -1,0 +1,60 @@
+<main class="welcome-page">
+  <section class="welcome-card" aria-labelledby="welcomeTitle">
+    <div class="welcome-card__content">
+      <header class="welcome-card__header">
+        <h1 id="welcomeTitle">Welcome</h1>
+        <p>
+          Pick the option that suits your role: create a request as a
+          stakeholder or log in if you're part of the team.
+        </p>
+      </header>
+
+      <div class="welcome-options" aria-label="Choose how to enter Join">
+        <section class="welcome-option" aria-labelledby="stakeholderOptionTitle">
+          <h2 id="stakeholderOptionTitle">
+            <img
+              src="./components/assets/img/icons/work.svg"
+              width="24"
+              height="24"
+              alt=""
+            />
+            <span>Are you a stakeholder?</span>
+          </h2>
+          <a
+            class="welcome-option__button welcome-option__button--primary"
+            href="./stakeholder.html"
+          >
+            Create request
+          </a>
+        </section>
+
+        <section
+          class="welcome-option welcome-option--member"
+          aria-labelledby="memberOptionTitle"
+        >
+          <h2 id="memberOptionTitle">
+            <img
+              src="./components/assets/img/icons/group.svg"
+              width="25"
+              height="20"
+              alt=""
+            />
+            <span>Are you a team member?</span>
+          </h2>
+          <a
+            class="welcome-option__button welcome-option__button--secondary"
+            href="./login.html"
+            data-page="login"
+          >
+            Member log in
+          </a>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <footer class="welcome-footer">
+    <a href="./privacyPolicy.html" data-page="privacy-policy">Privacy Policy</a>
+    <a href="./legalNotice.html" data-page="legal-notice">Legal notice</a>
+  </footer>
+</main>

@@ -1,7 +1,12 @@
 const routes = {
+  welcome: {
+    title: "Join | Welcome",
+    file: "./index.html",
+    template: "./components/html/pages/welcome.html",
+  },
   login: {
     title: "Join | Log in",
-    file: "./index.html",
+    file: "./login.html",
     template: "./components/html/pages/login.html",
   },
   signup: {
@@ -208,7 +213,7 @@ function showRenderedPage(app, animatePage) {
  */
 function getValidPage() {
   const page = document.body.dataset.page;
-  return routes[page] ? page : "login";
+  return routes[page] ? page : "welcome";
 }
 
 

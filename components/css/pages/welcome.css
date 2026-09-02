@@ -1,0 +1,162 @@
+.welcome-page {
+  --welcome-accent: #177da8;
+  --welcome-accent-hover: #29abe2;
+
+  position: relative;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #2a3647;
+  background-color: #2a3647;
+  font-family: "Open Sans", Arial, Helvetica, sans-serif;
+}
+
+.welcome-card {
+  width: min(calc(100% - 64px), 789px);
+  min-height: 403px;
+  padding: 56px 72px;
+  background-color: #ffffff;
+  border-radius: 30px;
+}
+
+.welcome-card__content {
+  width: 100%;
+}
+
+.welcome-card__header {
+  min-height: 135px;
+  text-align: center;
+}
+
+.welcome-card__header h1 {
+  position: relative;
+  width: fit-content;
+  height: 54px;
+  margin: 0 auto 24px;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.welcome-card__header h1::after {
+  content: "";
+  position: absolute;
+  top: 54px;
+  left: 50%;
+  width: 120px;
+  height: 3px;
+  background-color: var(--welcome-accent);
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+.welcome-card__header p {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.welcome-options {
+  display: grid;
+  grid-template-columns: 277px 304px;
+  justify-content: space-between;
+  margin-top: 56px;
+}
+
+.welcome-option {
+  min-height: 100px;
+}
+
+.welcome-option h2 {
+  min-height: 28px;
+  margin: 0 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.welcome-option h2 img {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.welcome-option__button {
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-decoration: none;
+  transition:
+    color 100ms ease,
+    background-color 100ms ease,
+    border-color 100ms ease;
+}
+
+.welcome-option__button--primary {
+  min-width: 196px;
+  color: #ffffff;
+  background-color: var(--welcome-accent);
+}
+
+.welcome-option__button--primary:hover {
+  background-color: var(--welcome-accent-hover);
+}
+
+.welcome-option__button--secondary {
+  min-width: 165px;
+  padding-block: 12px;
+  color: #2a3647;
+  background-color: #ffffff;
+  border-color: #2a3647;
+  font-size: 19px;
+}
+
+.welcome-option__button--secondary:hover {
+  color: var(--welcome-accent-hover);
+  border-color: var(--welcome-accent-hover);
+}
+
+.welcome-option__button:focus-visible,
+.welcome-footer a:focus-visible {
+  outline: 3px solid var(--welcome-accent-hover);
+  outline-offset: 3px;
+}
+
+.welcome-footer {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.welcome-footer a {
+  padding: 8px;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color 100ms ease;
+}
+
+.welcome-footer a:hover {
+  color: var(--welcome-accent-hover);
+}

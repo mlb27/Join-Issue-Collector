@@ -3,24 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Choose how you want to use Join: submit a stakeholder request or log in as a team member."
-    />
-    <title>Join | Welcome</title>
+    <title>Join | Log in</title>
     <link rel="icon" type="image/png" href="./components/assets/img/icons/favicon_white.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=Open+Sans:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="./base.css" />
     <script src="./components/js/core/shared.js" defer></script>
+    <script src="./components/js/firebase/firebaseLoader.js" defer></script>
+    <script src="./components/js/auth/auth.js" defer></script>
+    <script src="./components/js/auth/login.js" defer></script>
     <script src="./components/js/core/htmlIncludes.js" defer></script>
+    <script src="./components/js/core/pageTransition.js" defer></script>
     <script src="./main.js" defer></script>
   </head>
-  <body data-page="welcome">
+  <body data-page="login">
     <div id="app"></div>
   </body>
 </html>

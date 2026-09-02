@@ -27,7 +27,7 @@ test("shows signup success feedback once for three seconds", () => {
 
   assert.equal(feedback.hidden, false);
   assert.equal(timeoutDelay, 3000);
-  assert.equal(replacedUrl, "/index.html");
+  assert.equal(replacedUrl, "/login.html");
   hideFeedback();
   assert.equal(feedback.hidden, true);
 });
@@ -41,7 +41,7 @@ test("shows signup success feedback once for three seconds", () => {
 function createSuccessWindow(onReplace) {
   return {
     location: {
-      href: "http://localhost/index.html?signup=success",
+      href: "http://localhost/login.html?signup=success",
       search: "?signup=success",
     },
     history: { replaceState: (_state, _title, url) => onReplace(url) },
