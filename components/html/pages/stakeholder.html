@@ -29,8 +29,14 @@
         />
       </a>
 
-      <p class="stakeholder-quota" aria-label="0 of 10 requests used today">
-        <strong>0 <span>of</span> 10</strong>
+      <p
+        id="stakeholderQuota"
+        class="stakeholder-quota"
+        aria-label="0 of 10 requests used today"
+      >
+        <strong>
+          <span id="stakeholderRequestCount">0</span> <span>of</span> 10
+        </strong>
         <span>requests used today</span>
       </p>
     </header>
@@ -38,7 +44,7 @@
     <div class="stakeholder-content">
       <h1 id="stakeholderTitle">Welcome</h1>
 
-      <div class="stakeholder-details">
+      <div class="stakeholder-details" data-stakeholder-view="default">
         <div class="stakeholder-details__row">
           <div class="stakeholder-copy">
             <h2>
@@ -82,6 +88,50 @@
             alt=""
           />
         </a>
+      </div>
+
+      <div
+        class="stakeholder-details stakeholder-limit"
+        data-stakeholder-view="limit"
+        hidden
+      >
+        <div class="stakeholder-limit__row">
+          <section
+            class="stakeholder-limit__copy"
+            aria-labelledby="stakeholderLimitTitle"
+          >
+            <h2 id="stakeholderLimitTitle" class="stakeholder-limit__notice">
+              The daily 10-request limit has been reached!
+            </h2>
+
+            <p class="stakeholder-limit__description">
+              Need more? No worries — you can still send emails, but our team
+              will review them manually instead of using AI to create tickets.
+            </p>
+
+            <a
+              class="stakeholder-email-button stakeholder-limit__button"
+              href="mailto:?subject=Join%20issue%20request"
+              aria-label="Send an issue request in your email app"
+            >
+              <span>Send an email</span>
+              <img
+                src="./components/assets/img/icons/check.svg"
+                width="24"
+                height="24"
+                alt=""
+              />
+            </a>
+          </section>
+
+          <img
+            class="stakeholder-limit__illustration"
+            src="./components/assets/img/illustrations/stakeholder-limit-board.png"
+            width="416"
+            height="283"
+            alt="A person pointing at requests on a digital board"
+          />
+        </div>
       </div>
     </div>
   </section>

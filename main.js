@@ -333,6 +333,7 @@ function createPageUrl(page, params = {}) {
  * @param {string} page - The route key of the rendered page.
  */
 function initStaticPage(page) {
+  if (page === "stakeholder") initStakeholderPage();
   if (page === "login") initLoginValidation();
   if (page === "signup") initSignupValidation();
   if (page === "help") initHelpPage();
