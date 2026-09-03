@@ -4,6 +4,11 @@ const routes = {
     file: "./index.html",
     template: "./components/html/pages/welcome.html",
   },
+  stakeholder: {
+    title: "Join | Create a request",
+    file: "./stakeholder.html",
+    template: "./components/html/pages/stakeholder.html",
+  },
   login: {
     title: "Join | Log in",
     file: "./login.html",
