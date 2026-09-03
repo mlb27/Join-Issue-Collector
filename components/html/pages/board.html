@@ -11,8 +11,8 @@
           </svg>
         </button>
       </div>
-      <a class="board-add-task" href="./addTask.html?from=board" data-page="add-task" data-from="board"
-        aria-label="Add task">
+      <a class="board-add-task" href="./addTask.html?status=triage&from=board" data-page="add-task"
+        data-task-status="triage" data-from="board" aria-label="Add task to Triage">
         <span class="board-add-task__label">Add task</span>
         <img src="./components/assets/img/icons/add.svg" alt="" aria-hidden="true" />
       </a>
@@ -20,6 +20,15 @@
   </div>
 
   <div class="board-columns" aria-label="Saved tasks">
+    <section class="board-column" aria-labelledby="boardTriageTitle">
+      <div class="board-column__header">
+        <h2 id="boardTriageTitle">Triage</h2>
+        <a class="board-column__add" href="./addTask.html?status=triage&from=board" data-page="add-task"
+          data-task-status="triage" data-from="board" aria-label="Add task to Triage">+</a>
+      </div>
+      <div class="board-task-list" data-board-status="triage"></div>
+    </section>
+
     <section class="board-column" aria-labelledby="boardTodoTitle">
       <div class="board-column__header">
         <h2 id="boardTodoTitle">To do</h2>

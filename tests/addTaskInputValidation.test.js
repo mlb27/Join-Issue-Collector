@@ -37,6 +37,19 @@ test("treats whitespace-only required Add Task strings as empty", () => {
 });
 
 
+test("defaults manually created tasks to Triage", () => {
+  const statusContext = loadBrowserScripts(
+    ["components/js/addTask/addTask.js"],
+    {
+      URLSearchParams,
+      window: { location: { search: "" } },
+    },
+  );
+
+  assert.equal(statusContext.getAddTaskStatus(), "triage");
+});
+
+
 test("maps the custom category button blur to category validation", () => {
   const dropdown = { contains: (target) => target === "inside" };
   const validationContext = loadBrowserScripts([

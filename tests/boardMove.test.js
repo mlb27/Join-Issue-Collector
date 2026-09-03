@@ -1,7 +1,34 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const { loadBrowserScripts } = require("./helpers/scriptContext");
+const projectRoot = path.resolve(__dirname, "..");
+
+
+test("renders Triage as the first board column", () => {
+  const boardPage = fs.readFileSync(
+    path.join(projectRoot, "components/html/pages/board.html"),
+    "utf8",
+  );
+
+  assert.ok(boardPage.indexOf('data-board-status="triage"') >= 0);
+  assert.ok(
+    boardPage.indexOf('data-board-status="triage"') <
+      boardPage.indexOf('data-board-status="todo"'),
+  );
+});
+
+
+test("offers To do as the next destination from Triage", () => {
+  const context = loadBrowserScripts(["components/js/board/boardViewData.js"]);
+
+  assert.deepEqual(
+    Array.from(context.getBoardMoveTargets("triage"), (target) => target.value),
+    ["todo"],
+  );
+});
 
 
 test("offers the adjacent board columns as move targets", () => {
@@ -13,6 +40,16 @@ test("offers the adjacent board columns as move targets", () => {
       (target) => target.value,
     ),
     ["todo", "feedback"],
+  );
+});
+
+
+test("offers Triage before In progress from To do", () => {
+  const context = loadBrowserScripts(["components/js/board/boardViewData.js"]);
+
+  assert.deepEqual(
+    Array.from(context.getBoardMoveTargets("todo"), (target) => target.value),
+    ["triage", "in-progress"],
   );
 });
 

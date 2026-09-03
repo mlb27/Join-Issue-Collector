@@ -1,6 +1,6 @@
 .board-content {
-  width: min(100%, 1160px);
-  padding: 92px 36px 48px 64px;
+  width: min(100%, 1208px);
+  padding: 79.5px 0 48px;
 }
 
 .board-header {
@@ -8,17 +8,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 52px;
+  height: 73px;
+  margin: 0 88px 48px 64px;
 }
 
 .board-header h1 {
   margin: 0;
   color: var(--color-text-dark);
-  font-size: 58px;
-  line-height: 1;
+  font-size: 61px;
+  line-height: 1.2;
 }
 
 .board-add-task {
+  width: 160px;
   min-height: 48px;
   gap: 6px;
   display: inline-flex;
@@ -28,6 +30,7 @@
   border-radius: 8px;
   background: var(--color-primary);
   color: var(--color-white);
+  font-size: 21px;
   font-weight: 700;
   text-decoration: none;
   transition: background-color 100ms ease;
@@ -38,14 +41,19 @@
 }
 
 .board-add-task img {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
+}
+
+.board-add-task__label {
+  white-space: nowrap;
 }
 
 .board-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 26px;
+  grid-template-columns: repeat(5, minmax(0, 220px));
+  gap: 16px;
+  padding: 0 20px 0 24px;
 }
 
 .board-column {
@@ -153,10 +161,16 @@ body.board-dragging * {
   overflow: hidden;
 }
 
-.board-card__description,
-.board-card__subtasks {
+.board-card__description {
   color: var(--color-muted);
   font-size: 16px;
+  line-height: 1.2;
+}
+
+.board-card__subtasks {
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 12px;
   line-height: 1.2;
 }
 
@@ -258,7 +272,10 @@ body.board-dragging * {
 }
 
 .board-empty-state {
-  padding: 18px;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 8px 12px;
   border: 1px dashed var(--color-border-auth);
   border-radius: 10px;
   background: var(--color-empty-state);
@@ -296,6 +313,12 @@ body.board-dragging * {
   .board-columns {
     grid-template-columns: 1fr;
     gap: 32px;
+    padding: 0;
+  }
+
+  .board-header {
+    height: auto;
+    margin: 0 0 52px;
   }
 
   .board-task-list {

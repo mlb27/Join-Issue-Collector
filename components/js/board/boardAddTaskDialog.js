@@ -1,4 +1,4 @@
-let addTaskDialogTargetStatus = "todo";
+let addTaskDialogTargetStatus = "triage";
 
 
 /**
@@ -77,7 +77,7 @@ function bindAddTaskDialogCancelButton() {
  * @param {string} [status] - The column status to preselect.
  */
 function openAddTaskDialog(status) {
-  addTaskDialogTargetStatus = addTaskStatuses.includes(status) ? status : "todo";
+  addTaskDialogTargetStatus = addTaskStatuses.includes(status) ? status : "triage";
   resetAddTaskDialogForm();
   getElement("addTaskDialog").hidden = false;
   getElement("addTaskDialogCard").scrollTop = 0;

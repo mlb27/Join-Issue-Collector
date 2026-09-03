@@ -1,5 +1,5 @@
 const addTaskRedirectDelay = 900;
-const addTaskStatuses = ["todo", "in-progress", "feedback", "done"];
+const addTaskStatuses = ["triage", "todo", "in-progress", "feedback", "done"];
 let addTaskRedirectTimer;
 
 
@@ -185,12 +185,12 @@ function initAddTaskCloseButton() {
 
 
 /**
- * Uses a valid status passed by a board column and defaults to To do.
+ * Uses a valid status passed by a board column and defaults to Triage.
  */
 function getAddTaskStatus() {
   if (typeof addTaskDialogTargetStatus !== "undefined") return addTaskDialogTargetStatus;
   const status = new URLSearchParams(window.location.search).get("status");
-  return addTaskStatuses.includes(status) ? status : "todo";
+  return addTaskStatuses.includes(status) ? status : "triage";
 }
 
 
