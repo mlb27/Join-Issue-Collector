@@ -75,13 +75,12 @@ async function loginGuestUser() {
 
 
 /**
- * Signs out from Firebase, clears the local user and returns to login.
+ * Signs out from Firebase, clears the local user and returns to the welcome page.
  */
 async function handleLogout() {
-  const logoutSucceeded = await logoutFirebaseUserSafely();
+  await logoutFirebaseUserSafely();
   clearStoredUser();
-  const params = logoutSucceeded ? {} : { logout: "failed" };
-  navigateToPage("login", params);
+  navigateToPage("welcome");
 }
 
 

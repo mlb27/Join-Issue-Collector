@@ -4,7 +4,7 @@ const test = require("node:test");
 const { loadBrowserScripts } = require("./helpers/scriptContext");
 
 
-test("completes local logout when Firebase logout fails", async () => {
+test("returns to welcome after local logout when Firebase logout fails", async () => {
   let cleared = false;
   let destination = "";
   const context = loadBrowserScripts(["components/js/auth/auth.js"], {
@@ -21,7 +21,7 @@ test("completes local logout when Firebase logout fails", async () => {
   await context.handleLogout();
 
   assert.equal(cleared, true);
-  assert.equal(destination, "login");
+  assert.equal(destination, "welcome");
 });
 
 
