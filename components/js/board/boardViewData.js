@@ -204,6 +204,42 @@ function getBoardPriorityIcon(priority) {
 
 
 /**
+ * Prepares stored creator data for the task detail view.
+ * Legacy tasks without creator metadata remain valid and return no creator row.
+ * @param {Object} task - Stored task containing optional creator metadata.
+ * @returns {Object|null} Safe creator display data or null for a legacy task.
+ */
+function getBoardCreatorViewData(task) {
+  const creator = task?.creator;
+  if (!creator || typeof creator !== "object") return null;
+  const email = normalizeText(creator.email);
+  const name = normalizeText(creator.name) || email;
+  if (!name) return null;
+  const type = creator.type === "external" || task.source === "email"
+    ? "external"
+    : "internal";
+  return {
+    type,
+    typeLabel: type === "external" ? "External" : "Member",
+    name,
+    emailHref: type === "external" && isEmailAddressValid(email)
+      ? `mailto:${email}`
+      : "",
+  };
+}
+
+
+/**
+ * Checks whether the task came from the automated email collector.
+ * @param {Object} task - Stored task containing its source value.
+ * @returns {boolean} True for an AI-generated email ticket.
+ */
+function isBoardTaskAiGenerated(task) {
+  return task?.source === "email";
+}
+
+
+/**
  * Prepares all values required to render one board card.
  * @param {Object} task - Stored task to prepare.
  * @returns {Object} Complete board-card view data.

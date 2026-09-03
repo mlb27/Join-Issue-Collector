@@ -65,6 +65,39 @@ test("uses directional icons relative to the current board column", () => {
 });
 
 
+test("distinguishes internal and external task creators", () => {
+  const context = loadBrowserScripts([
+    "components/js/core/shared.js",
+    "components/js/board/boardViewData.js",
+  ]);
+  const member = context.getBoardCreatorViewData({
+    source: "manual",
+    creator: { type: "internal", name: "Ada Lovelace" },
+  });
+  const stakeholder = context.getBoardCreatorViewData({
+    source: "email",
+    creator: { name: "Felix Richter", email: "felix@example.com" },
+  });
+
+  assert.equal(member.typeLabel, "Member");
+  assert.equal(member.emailHref, "");
+  assert.equal(stakeholder.typeLabel, "External");
+  assert.equal(stakeholder.emailHref, "mailto:felix@example.com");
+  assert.equal(context.isBoardTaskAiGenerated({ source: "email" }), true);
+});
+
+
+test("keeps legacy tasks without creator metadata compatible", () => {
+  const context = loadBrowserScripts([
+    "components/js/core/shared.js",
+    "components/js/board/boardViewData.js",
+  ]);
+
+  assert.equal(context.getBoardCreatorViewData({ title: "Legacy task" }), null);
+  assert.equal(context.isBoardTaskAiGenerated({ source: "manual" }), false);
+});
+
+
 test("renders one column's tasks ordered by creation time, oldest first", () => {
   const taskList = { dataset: { boardStatus: "todo" }, innerHTML: "" };
   const context = loadBrowserScripts(

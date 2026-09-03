@@ -166,7 +166,24 @@ function getAddTaskData() {
     category: getAddTaskCategory(),
     subtasks: getAddTaskSubtasks(),
     status: getAddTaskStatus(),
+    source: "manual",
+    creator: getAddTaskCreator(),
     createdAt: new Date().toISOString(),
+  };
+}
+
+
+/**
+ * Creates the internal creator reference for a manually submitted task.
+ * @returns {{type: string, name: string, email: string, uid: string}} Stored creator data.
+ */
+function getAddTaskCreator() {
+  const user = getStoredUser() || {};
+  return {
+    type: "internal",
+    name: String(user.name || "Guest").trim(),
+    email: String(user.email || "").trim(),
+    uid: String(user.uid || "").trim(),
   };
 }
 

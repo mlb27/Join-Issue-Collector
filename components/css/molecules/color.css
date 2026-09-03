@@ -48,6 +48,8 @@
   --color-category-user-story: #3f42ff;
   --color-category-technical: #6fd0c1;
   --color-progress: #6b83ff;
+  --color-creator-badge-background: #e8f0fe;
+  --color-creator-badge-text: #0b3681;
 
   --shadow-soft: 0 0 14px rgba(0, 0, 0, 0.12);
   --shadow-side-panel: 4px 0 6px rgba(0, 0, 0, 0.08);

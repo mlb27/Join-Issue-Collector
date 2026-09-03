@@ -50,6 +50,26 @@ test("defaults manually created tasks to Triage", () => {
 });
 
 
+test("stores the signed-in member as creator of a manual task", () => {
+  const creatorContext = loadBrowserScripts(
+    ["components/js/addTask/addTask.js"],
+    {
+      getStoredUser: () => ({
+        name: "  Ada Lovelace  ",
+        email: "  ada@example.com  ",
+        uid: "  member-1  ",
+      }),
+    },
+  );
+
+  const creator = creatorContext.getAddTaskCreator();
+  assert.equal(creator.type, "internal");
+  assert.equal(creator.name, "Ada Lovelace");
+  assert.equal(creator.email, "ada@example.com");
+  assert.equal(creator.uid, "member-1");
+});
+
+
 test("maps the custom category button blur to category validation", () => {
   const dropdown = { contains: (target) => target === "inside" };
   const validationContext = loadBrowserScripts([

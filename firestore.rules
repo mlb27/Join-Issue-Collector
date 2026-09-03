@@ -12,10 +12,12 @@ service cloud.firestore {
     //   - description: string, optional, max 1000 chars
     //   - dueDate: string, required, 10-40 chars
     //   - priority: string, required, low|medium|urgent
-    //   - status: string, required, todo|in-progress|feedback|done
+    //   - status: string, required, triage|todo|in-progress|feedback|done
     //   - category: string, required, 1-80 chars
     //   - assignedTo: list, optional, max 50 items
     //   - subtasks: list, optional, max 50 items
+    //   - source: string, required for new tasks, manual|email
+    //   - creator: map, required for new tasks, immutable
     //   - createdAt: timestamp, required, immutable
     //   - updatedAt: timestamp, required
     //
@@ -82,20 +84,53 @@ service cloud.firestore {
       return request.resource.data.createdAt == resource.data.createdAt;
     }
 
+    function isValidTaskCreator(creator) {
+      return creator is map &&
+        creator.keys().hasOnly(['type', 'name', 'email', 'uid']) &&
+        creator.keys().hasAll(['type', 'name', 'email', 'uid']) &&
+        creator.type in ['internal', 'external'] &&
+        isValidString(creator.name, 1, 120) &&
+        isValidString(creator.email, 0, 120) &&
+        (creator.email == '' || isValidEmail(creator.email)) &&
+        isValidString(creator.uid, 0, 128);
+    }
+
+    function hasValidTaskOrigin(data) {
+      return (!('source' in data) && !('creator' in data)) ||
+        (data.keys().hasAll(['source', 'creator']) &&
+          data.source in ['manual', 'email'] &&
+          isValidTaskCreator(data.creator) &&
+          ((data.source == 'manual' && data.creator.type == 'internal') ||
+            (data.source == 'email' && data.creator.type == 'external')));
+    }
+
+    function isManualTaskFromCurrentUser(data) {
+      return data.source == 'manual' &&
+        data.creator.type == 'internal' &&
+        data.creator.uid == request.auth.uid;
+    }
+
+    function taskOriginUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['source', 'creator']);
+    }
+
     function isValidTask(data) {
       return hasOnlyFields([
         'title', 'description', 'dueDate', 'priority', 'status',
-        'category', 'assignedTo', 'subtasks', 'createdAt', 'updatedAt'
+        'category', 'assignedTo', 'subtasks', 'source', 'creator',
+        'createdAt', 'updatedAt'
       ]) &&
       hasRequiredFields(['title', 'dueDate', 'priority', 'status', 'category', 'createdAt', 'updatedAt']) &&
       isValidString(data.title, 1, 120) &&
       (!('description' in data) || isValidString(data.description, 0, 1000)) &&
       isValidString(data.dueDate, 10, 40) &&
       data.priority in ['low', 'medium', 'urgent'] &&
-      data.status in ['todo', 'in-progress', 'feedback', 'done'] &&
+      data.status in ['triage', 'todo', 'in-progress', 'feedback', 'done'] &&
       isValidString(data.category, 1, 80) &&
       (!('assignedTo' in data) || (data.assignedTo is list && data.assignedTo.size() <= 50)) &&
       (!('subtasks' in data) || (data.subtasks is list && data.subtasks.size() <= 50)) &&
+      hasValidTaskOrigin(data) &&
       hasValidTimestamps();
     }
 
@@ -119,8 +154,13 @@ service cloud.firestore {
 
     match /tasks/{taskId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidTask(request.resource.data);
-      allow update: if isAuthenticated() && isValidTask(request.resource.data) && createdAtUnchanged();
+      allow create: if isAuthenticated() &&
+        isValidTask(request.resource.data) &&
+        isManualTaskFromCurrentUser(request.resource.data);
+      allow update: if isAuthenticated() &&
+        isValidTask(request.resource.data) &&
+        createdAtUnchanged() &&
+        taskOriginUnchanged();
       allow delete: if isAuthenticated();
     }
 

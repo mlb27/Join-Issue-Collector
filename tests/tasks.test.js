@@ -1,4 +1,6 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -11,6 +13,27 @@ const tasksScript = "components/js/tasks/tasks.js";
 const sharedScript = "components/js/core/shared.js";
 const taskStoreScript = "components/js/tasks/tasksStore.js";
 const taskStorageKey = "joinTasks";
+const projectRoot = path.resolve(__dirname, "..");
+const firestoreRules = fs.readFileSync(
+  path.join(projectRoot, "firestore.rules"),
+  "utf8",
+);
+
+
+test("targets the isolated Issue Collector Firebase project", () => {
+  const firebaseRc = fs.readFileSync(path.join(projectRoot, ".firebaserc"), "utf8");
+
+  assert.match(firebaseRc, /"default": "join-issue-collector-b5f54"/);
+  assert.doesNotMatch(firebaseRc, /join-teamjob/);
+});
+
+
+test("allows Triage and validates immutable task origin metadata", () => {
+  assert.match(firestoreRules, /data\.status in \['triage', 'todo'/);
+  assert.match(firestoreRules, /'source', 'creator'/);
+  assert.match(firestoreRules, /data\.creator\.uid == request\.auth\.uid/);
+  assert.match(firestoreRules, /taskOriginUnchanged\(\)/);
+});
 
 /**
  * Loads the local task logic with optional tasks in memory.

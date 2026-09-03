@@ -298,6 +298,7 @@ function fillBoardTaskDetail(task) {
     "boardTaskDetailDescription",
     task.description || "No description",
   );
+  getElement("boardTaskDetailAiNote").hidden = !isBoardTaskAiGenerated(task);
   fillBoardDetailMetaFields(task);
   renderBoardDetailSubtasks(task);
 }
@@ -308,12 +309,46 @@ function fillBoardTaskDetail(task) {
  * @param {Object} task - The task providing the meta information.
  */
 function fillBoardDetailMetaFields(task) {
+  renderBoardDetailCreator(task);
   setElementText(
     "boardTaskDetailDueDate",
     formatTaskDueDate(task.dueDate) || "-",
   );
   fillBoardDetailPriority(task.priority);
   renderBoardDetailAssignees(task.assignedTo);
+}
+
+
+/**
+ * Shows the stored internal member or external stakeholder in task details.
+ * @param {Object} task - Task providing optional creator metadata.
+ */
+function renderBoardDetailCreator(task) {
+  const row = getElement("boardTaskDetailCreatorRow");
+  const creator = getBoardCreatorViewData(task);
+  row.hidden = !creator;
+  if (!creator) return;
+  setElementText("boardTaskDetailCreatorType", creator.typeLabel);
+  setElementText("boardTaskDetailCreatorName", creator.name);
+  row.dataset.creatorType = creator.type;
+  renderBoardDetailCreatorEmail(creator);
+}
+
+
+/**
+ * Adds a safe mail action for external creators with a valid email address.
+ * @param {Object} creator - Prepared creator view data.
+ */
+function renderBoardDetailCreatorEmail(creator) {
+  const link = getElement("boardTaskDetailCreatorEmail");
+  link.hidden = !creator.emailHref;
+  if (!creator.emailHref) {
+    link.removeAttribute("href");
+    link.removeAttribute("aria-label");
+    return;
+  }
+  link.href = creator.emailHref;
+  link.setAttribute("aria-label", `Send an email to ${creator.name}`);
 }
 
 
