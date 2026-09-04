@@ -48,6 +48,27 @@ test("uses current Gmail send fields for notification nodes", () => {
 });
 
 
+test("reads Gmail trigger fields with current uppercase names", () => {
+  const workflow = readWorkflow();
+  const extractNode = workflow.nodes.find((node) => node.name === "Extract email request");
+
+  assert.match(extractNode.parameters.jsCode, /email\.From/);
+  assert.match(extractNode.parameters.jsCode, /email\.Subject/);
+  assert.match(extractNode.parameters.jsCode, /email\.Snippet/);
+});
+
+
+test("strips markdown fences before parsing AI JSON output", () => {
+  const workflow = readWorkflow();
+  const prepareNode = workflow.nodes.find((node) => node.name === "Prepare Firestore task");
+
+  assert.match(prepareNode.parameters.jsCode, /stripMarkdownCodeBlock/);
+  assert.match(prepareNode.parameters.jsCode, /JSON\.parse\(stripMarkdownCodeBlock\(aiOutput\)\)/);
+  assert.ok(prepareNode.parameters.jsCode.includes(".replace(/^```(?:json)?\\s*/i, '')"));
+  assert.ok(prepareNode.parameters.jsCode.includes(".replace(/\\s*```$/i, '')"));
+});
+
+
 test("creates Firestore documents with Join task fields", () => {
   const workflow = readWorkflow();
   const createNode = workflow.nodes.find((node) => node.name === "Create Firestore ticket");
