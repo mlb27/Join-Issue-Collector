@@ -37,4 +37,17 @@ test("offers both role paths and public legal links", () => {
   assert.match(welcomePage, /href="\.\/login\.html"/);
   assert.match(welcomePage, /href="\.\/privacyPolicy\.html"/);
   assert.match(welcomePage, /href="\.\/legalNotice\.html"/);
+  assert.match(welcomePage, />\s*Not a Join user\?\s*</);
+  assert.match(welcomePage, /href="\.\/signup\.html"/);
+});
+
+
+test("stacks the welcome choices and preserves readable mobile text", () => {
+  const styles = readProjectFile("components/css/pages/welcome.css");
+
+  assert.match(styles, /@media \(max-width: 767px\)/);
+  assert.match(styles, /grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(styles, /@media \(max-width: 479px\)/);
+  assert.match(styles, /\.welcome-card \{[\s\S]*?width: min\(calc\(100% - 32px\), 396px\)/);
+  assert.match(styles, /@media \(max-width: 399px\)/);
 });

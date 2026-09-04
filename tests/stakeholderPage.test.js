@@ -51,7 +51,7 @@ test("explains email ticket creation and provides the public actions", () => {
   assert.match(page, /0 of 10 requests used today/);
   assert.match(page, /Our AI system will automatically generate a ticket/);
   assert.match(page, /href="mailto:/);
-  assert.match(page, />\s*Create Email Request\s*</);
+  assert.match(page, />\s*Create request\s*</);
   assert.match(page, /data-page="welcome"/);
   assert.match(page, /href="\.\/privacyPolicy\.html"/);
   assert.match(page, /href="\.\/legalNotice\.html"/);
@@ -78,5 +78,19 @@ test("exposes the daily-limit design through the demo query", () => {
   );
   assert.match(page, /data-stakeholder-view="limit"/);
   assert.match(page, /The daily 10-request limit has been reached!/);
-  assert.match(page, />\s*Send an email\s*</);
+  assert.equal((page.match(/>\s*Create request\s*</g) || []).length, 2);
+});
+
+
+test("uses fluid mobile layouts for both stakeholder states", () => {
+  const styles = readProjectFile("components/css/pages/stakeholder.css");
+
+  assert.match(styles, /@media \(max-width: 1199px\)/);
+  assert.match(styles, /\.stakeholder-details__row,\s*\.stakeholder-limit__row/);
+  assert.match(styles, /grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(styles, /\.stakeholder-copy,\s*\.stakeholder-limit__copy \{\s*display: contents;/);
+  assert.match(styles, /@media \(max-width: 479px\)/);
+  assert.match(styles, /width: min\(calc\(100% - 38px\), 390px\)/);
+  assert.match(styles, /\.stakeholder-illustration \{\s*width: min\(100%, 292px\);\s*height: 201px;/);
+  assert.match(styles, /@media \(max-width: 399px\)/);
 });

@@ -35,9 +35,11 @@
         aria-label="0 of 10 requests used today"
       >
         <strong>
-          <span id="stakeholderRequestCount">0</span> <span>of</span> 10
+          <span id="stakeholderRequestCount">0</span>
+          <span class="stakeholder-quota__of">of</span>
+          <span class="stakeholder-quota__max">10</span>
         </strong>
-        <span>requests used today</span>
+        <span>requests used<span class="stakeholder-quota__today"> today</span></span>
       </p>
     </header>
 
@@ -80,7 +82,7 @@
           href="mailto:?subject=Join%20issue%20request"
           aria-label="Create an email request in your email app"
         >
-          <span>Create Email Request</span>
+          <span>Create request</span>
           <img
             src="./components/assets/img/icons/check.svg"
             width="24"
@@ -114,7 +116,7 @@
               href="mailto:?subject=Join%20issue%20request"
               aria-label="Send an issue request in your email app"
             >
-              <span>Send an email</span>
+              <span>Create request</span>
               <img
                 src="./components/assets/img/icons/check.svg"
                 width="24"
