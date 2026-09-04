@@ -86,6 +86,7 @@ test("uses fluid mobile layouts for both stakeholder states", () => {
   const styles = readProjectFile("components/css/pages/stakeholder.css");
 
   assert.match(styles, /@media \(max-width: 1199px\)/);
+  assert.match(styles, /\.stakeholder-back \{\s*position: relative;\s*z-index: 1;/);
   assert.match(styles, /\.stakeholder-details__row,\s*\.stakeholder-limit__row/);
   assert.match(styles, /grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(styles, /\.stakeholder-copy,\s*\.stakeholder-limit__copy \{\s*display: contents;/);

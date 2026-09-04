@@ -40,6 +40,8 @@
 }
 
 .stakeholder-back {
+  position: relative;
+  z-index: 1;
   width: 37px;
   height: 37px;
   display: grid;
