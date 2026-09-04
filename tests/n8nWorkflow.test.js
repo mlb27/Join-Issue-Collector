@@ -132,6 +132,37 @@ test("labels, archives and marks successfully processed emails as read", () => {
   ]);
 });
 
+test("routes processing errors to manual review", () => {
+  const workflow = readWorkflow();
+  const failingNodeNames = [
+    "Classify request with AI",
+    "Prepare Firestore task",
+    "Sign in n8n bot",
+    "Create Firestore ticket",
+    "Send confirmation email",
+  ];
+  const labelNode = workflow.nodes.find((node) => node.name === "Label failed email");
+  const archiveNode = workflow.nodes.find((node) => node.name === "Archive failed email");
+  const errorMailNode = workflow.nodes.find((node) => node.name === "Send processing error email");
+
+  failingNodeNames.forEach((name) => {
+    const node = workflow.nodes.find((candidate) => candidate.name === name);
+    assert.equal(node.onError, "continueErrorOutput");
+    assert.deepEqual(workflow.connections[name].main[1], [
+      { node: "Label failed email", type: "main", index: 0 },
+    ]);
+  });
+  assert.deepEqual(labelNode.parameters.labelIds, ["REPLACE_IN_N8N_GMAIL_FAILED_LABEL_ID"]);
+  assert.deepEqual(archiveNode.parameters.labelIds, ["INBOX"]);
+  assert.equal(errorMailNode.parameters.subject, "Join request needs manual review");
+  assert.deepEqual(workflow.connections["Label failed email"].main[0], [
+    { node: "Archive failed email", type: "main", index: 0 },
+  ]);
+  assert.deepEqual(workflow.connections["Archive failed email"].main[0], [
+    { node: "Send processing error email", type: "main", index: 0 },
+  ]);
+});
+
 test("keeps n8n workflow exports free of committed secrets", () => {
   const workflowSource = fs.readFileSync(workflowPath, "utf8");
 

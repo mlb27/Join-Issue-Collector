@@ -19,14 +19,14 @@
       "typeVersion": 1.3,
       "position": [
         -1072,
-        80
+        704
       ],
       "id": "d3080734-b944-4aa2-a193-7bbb4ca2fcdc",
       "name": "Watch stakeholder inbox",
       "credentials": {
         "gmailOAuth2": {
-          "name": "Gmail account",
-          "id": "REPLACE_IN_N8N"
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
         }
       }
     },
@@ -38,7 +38,7 @@
       "typeVersion": 2,
       "position": [
         -848,
-        80
+        704
       ],
       "id": "67cc3562-cd0e-4556-9607-a3a9ee18035c",
       "name": "Extract email request"
@@ -51,7 +51,7 @@
       "typeVersion": 2,
       "position": [
         -624,
-        80
+        704
       ],
       "id": "0bb78474-d517-4800-b0f2-972a0a17131f",
       "name": "Check daily request limit"
@@ -85,7 +85,7 @@
       "typeVersion": 2.3,
       "position": [
         -400,
-        80
+        704
       ],
       "id": "429e5532-157f-4fe2-acc9-8f7018a32c0c",
       "name": "Is automation allowed?"
@@ -99,10 +99,11 @@
       "typeVersion": 1.6,
       "position": [
         -176,
-        -176
+        464
       ],
       "id": "ae13d86b-6771-489a-ad5e-4a9848fa7f0d",
-      "name": "Classify request with AI"
+      "name": "Classify request with AI",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -112,10 +113,11 @@
       "typeVersion": 2,
       "position": [
         176,
-        -64
+        496
       ],
       "id": "cece9b05-c349-4f5a-828d-8c9727fc0a16",
-      "name": "Prepare Firestore task"
+      "name": "Prepare Firestore task",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -139,10 +141,11 @@
       "typeVersion": 4.5,
       "position": [
         624,
-        -64
+        352
       ],
       "id": "9fd73985-7e74-479c-9a1b-2812cc079f33",
-      "name": "Create Firestore ticket"
+      "name": "Create Firestore ticket",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -155,17 +158,18 @@
       "typeVersion": 2.1,
       "position": [
         848,
-        -64
+        272
       ],
       "id": "ae3c5d91-bfdf-4d57-9535-97887c90cd25",
       "name": "Send confirmation email",
       "webhookId": "98739865-d89e-42bf-aee6-a3d6bcd4be95",
       "credentials": {
         "gmailOAuth2": {
-          "name": "Gmail account",
-          "id": "REPLACE_IN_N8N"
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -178,15 +182,15 @@
       "typeVersion": 2.1,
       "position": [
         -112,
-        224
+        864
       ],
       "id": "757c31dc-6f0a-447e-b88f-c1eed70e84ed",
       "name": "Send limit email",
       "webhookId": "6038e915-0d7c-4dd2-9edd-51041c85c6bd",
       "credentials": {
         "gmailOAuth2": {
-          "name": "Gmail account",
-          "id": "REPLACE_IN_N8N"
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
         }
       }
     },
@@ -203,10 +207,11 @@
       "typeVersion": 4.5,
       "position": [
         400,
-        -64
+        416
       ],
       "id": "23bb97f7-9044-4544-a606-7684d8c353d6",
-      "name": "Sign in n8n bot"
+      "name": "Sign in n8n bot",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -218,15 +223,15 @@
       "type": "@n8n/n8n-nodes-langchain.lmOllama",
       "typeVersion": 1,
       "position": [
-        -112,
-        64
+        -104,
+        680
       ],
       "id": "61aef5e6-7381-43ec-8052-1c645a37b990",
       "name": "Ollama Model",
       "credentials": {
         "ollamaApi": {
-          "name": "Ollama account",
-          "id": "REPLACE_IN_N8N"
+          "id": "REPLACE_IN_N8N",
+          "name": "Ollama account"
         }
       }
     },
@@ -242,15 +247,15 @@
       "typeVersion": 2.2,
       "position": [
         1296,
-        -64
+        224
       ],
       "id": "606ef55c-d43c-4b60-9f3e-4177d154ef0d",
       "name": "Archive processed email",
       "webhookId": "66616d6f-d7a6-4ce8-aee8-aa2f30160b7a",
       "credentials": {
         "gmailOAuth2": {
-          "name": "Gmail account",
-          "id": "REPLACE_IN_N8N"
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
         }
       }
     },
@@ -266,15 +271,15 @@
       "typeVersion": 2.2,
       "position": [
         1072,
-        -64
+        224
       ],
       "id": "489a825e-2dbc-401c-8400-e65158b43e24",
       "name": "Label processed email",
       "webhookId": "9de26c9b-ac0b-420c-bdf5-01e0d65a3c5d",
       "credentials": {
         "gmailOAuth2": {
-          "name": "Gmail account",
-          "id": "REPLACE_IN_N8N"
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
         }
       }
     },
@@ -287,15 +292,86 @@
       "typeVersion": 2.2,
       "position": [
         1520,
-        -64
+        224
       ],
       "id": "6346a260-c866-46d5-a694-18ae1a9c68a3",
       "name": "Mark processed email as read",
       "webhookId": "503c3127-c81b-4e96-9e97-0263eb853cfb",
       "credentials": {
         "gmailOAuth2": {
-          "name": "Gmail account",
-          "id": "REPLACE_IN_N8N"
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "labelIds": [
+          "REPLACE_IN_N8N_GMAIL_FAILED_LABEL_ID"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1072,
+        656
+      ],
+      "id": "edc56463-61d4-4722-b088-5925443695af",
+      "name": "Label failed email",
+      "webhookId": "9de26c9b-ac0b-420c-bdf5-01e0d65a3c5d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extract email request').first().json.senderEmail }}",
+        "subject": "Join request needs manual review",
+        "message": "={{ 'Your request could not be processed automatically and was forwarded for manual review. Subject: ' + $('Extract email request').first().json.subject }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1520,
+        656
+      ],
+      "id": "c13f2269-f2c8-41f0-8e57-084448d99076",
+      "name": "Send processing error email",
+      "webhookId": "98739865-d89e-42bf-aee6-a3d6bcd4be95",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "labelIds": [
+          "INBOX"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        656
+      ],
+      "id": "ca981906-b205-4071-9b48-5bb5a14a9e8d",
+      "name": "Archive failed email",
+      "webhookId": "66616d6f-d7a6-4ce8-aee8-aa2f30160b7a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
         }
       }
     }
@@ -361,6 +437,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Label failed email",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -369,6 +452,13 @@
         [
           {
             "node": "Sign in n8n bot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Label failed email",
             "type": "main",
             "index": 0
           }
@@ -383,6 +473,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Label failed email",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -391,6 +488,13 @@
         [
           {
             "node": "Create Firestore ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Label failed email",
             "type": "main",
             "index": 0
           }
@@ -416,6 +520,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Label failed email",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -435,6 +546,28 @@
         [
           {
             "node": "Archive processed email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label failed email": {
+      "main": [
+        [
+          {
+            "node": "Archive failed email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive failed email": {
+      "main": [
+        [
+          {
+            "node": "Send processing error email",
             "type": "main",
             "index": 0
           }
