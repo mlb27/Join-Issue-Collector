@@ -236,25 +236,24 @@ not mean that credentials should be added to the repository.
 
 ## n8n Setup
 
-The repository contains a first importable n8n workflow for the stakeholder
-email collector:
+The repository contains an importable n8n workflow for the stakeholder email collector:
 
 ```text
 n8n/workflows/email-to-triage-ticket.json
 ```
 
 The workflow is inactive by default and contains no secrets. Import it through
-**Import from File** in a local or hosted n8n instance, then create the required
-credentials inside n8n:
+**Import from File** in a local or hosted n8n instance. Before activating it:
 
-- `Join stakeholder inbox` for the Gmail trigger and outgoing emails
-- `OpenAI account` or a compatible AI model credential for classification
-- `Firestore service account` for server-side ticket creation
-
-The Firestore HTTP node needs a Google OAuth2 credential with access to the
-Cloud Firestore API, for example the datastore scope:
-`https://www.googleapis.com/auth/datastore`. This credential is intentionally
-not part of the exported workflow and must be created inside n8n.
+1. Connect the Gmail nodes to the dedicated stakeholder inbox credential.
+2. Connect `Ollama Model` to an Ollama credential or replace it with a compatible
+   chat model.
+3. Create the dedicated Firebase Authentication user `n8n-bot@join.local`.
+4. In `Sign in n8n bot`, replace the Firebase Web API key and bot-password
+   placeholders only inside n8n.
+5. Publish the repository's `firestore.rules` in the Firebase project.
+6. Create the Gmail labels `erledigt` and `zu bearbeiten`, then select the
+   `erledigt` label again in `Label processed email`.
 
 The current stakeholder inbox is:
 
@@ -262,16 +261,15 @@ The current stakeholder inbox is:
 join.issue.collector.mail@gmail.com
 ```
 
-The workflow is prepared to watch unread stakeholder emails, extract sender,
-subject and body, enforce the public 10-request daily automation limit, classify
-the request with AI and create a Firestore ticket in `Triage`. Confirmation and
-limit emails are included as separate workflow steps.
+The workflow watches unread stakeholder emails, extracts sender, subject and
+body, enforces the public 10-request daily automation limit, classifies the
+request with AI and creates a Firestore ticket in `Triage`. On success it sends
+a confirmation, adds the `erledigt` label, removes `INBOX` and marks the original
+message as read. The limit branch sends a separate notification.
 
-Before activating the workflow in a real n8n instance, replace placeholder
-credentials, test the Gmail trigger with **Listen for test event**, and verify
-that the Firestore write node stores documents with `source: "email"` and an
-external `creator` object. Secrets must stay in n8n credentials and must not be
-exported into the JSON file.
+Credential IDs, the Firebase Web API key, the Firebase bot password and Gmail
+label IDs are placeholders in the committed JSON. Configure them only inside
+n8n and sanitize every later workflow export before committing it.
 
 ## Usage
 

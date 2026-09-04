@@ -11,22 +11,22 @@
           ]
         },
         "filters": {
-          "readStatus": "unread",
-          "includeSpamTrash": false
+          "includeSpamTrash": false,
+          "readStatus": "unread"
         }
       },
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.3,
       "position": [
-        0,
-        160
+        -1072,
+        80
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a001",
+      "id": "d3080734-b944-4aa2-a193-7bbb4ca2fcdc",
       "name": "Watch stakeholder inbox",
       "credentials": {
         "gmailOAuth2": {
-          "id": "REPLACE_IN_N8N",
-          "name": "Join stakeholder inbox"
+          "name": "Gmail account",
+          "id": "REPLACE_IN_N8N"
         }
       }
     },
@@ -37,10 +37,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        160
+        -848,
+        80
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a002",
+      "id": "67cc3562-cd0e-4556-9607-a3a9ee18035c",
       "name": "Extract email request"
     },
     {
@@ -50,10 +50,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        160
+        -624,
+        80
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a003",
+      "id": "0bb78474-d517-4800-b0f2-972a0a17131f",
       "name": "Check daily request limit"
     },
     {
@@ -84,10 +84,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        672,
-        160
+        -400,
+        80
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a005",
+      "id": "429e5532-157f-4fe2-acc9-8f7018a32c0c",
       "name": "Is automation allowed?"
     },
     {
@@ -98,75 +98,54 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.6,
       "position": [
-        896,
-        64
+        -176,
+        -176
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a006",
+      "id": "ae13d86b-6771-489a-ad5e-4a9848fa7f0d",
       "name": "Classify request with AI"
     },
     {
       "parameters": {
-        "model": "gpt-4o-mini",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.2,
-      "position": [
-        896,
-        288
-      ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a007",
-      "name": "OpenAI chat model",
-      "credentials": {
-        "openAiApi": {
-          "id": "REPLACE_IN_N8N",
-          "name": "OpenAI account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "/**\n * Converts the AI result into the Join task shape stored in Firestore.\n * The description always starts with an AI notice so the board remains clear\n * about automatically generated ticket content.\n */\nconst emailRequest = $('Extract email request').first().json;\nconst aiOutput = $input.first().json.output ?? $input.first().json.text ?? $input.first().json;\nlet parsed = {};\ntry {\n  parsed = typeof aiOutput === 'string' ? JSON.parse(stripMarkdownCodeBlock(aiOutput)) : aiOutput;\n} catch {\n  parsed = {};\n}\nconst categories = new Set(['user-story', 'technical-task']);\nconst priorities = new Set(['low', 'medium', 'urgent']);\nconst fallbackDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);\nconst title = String(parsed.title || emailRequest.subject || 'Stakeholder request').trim().slice(0, 120);\nconst category = categories.has(parsed.category) ? parsed.category : 'user-story';\nconst priority = priorities.has(parsed.priority) ? parsed.priority : 'medium';\nconst dueDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(parsed.dueDate || '')) ? parsed.dueDate : fallbackDate;\nconst generatedDescription = String(parsed.description || emailRequest.body).trim();\n\nreturn [{\n  json: {\n    task: {\n      title,\n      description: '[AI-generated from stakeholder email]\\n\\n' + generatedDescription,\n      dueDate,\n      priority,\n      status: 'triage',\n      category,\n      assignedTo: [],\n      subtasks: [],\n      source: 'email',\n      creator: {\n        type: 'external',\n        name: emailRequest.senderName,\n        email: emailRequest.senderEmail,\n        uid: '',\n      },\n    },\n    emailRequest,\n  },\n}];\n\n/**\n * Removes common markdown fences from model output before JSON parsing.\n * @param {string} value - Raw AI output text from the LLM node.\n * @returns {string} JSON candidate without surrounding code fences.\n */\nfunction stripMarkdownCodeBlock(value) {\n  return String(value)\n    .trim()\n    .replace(/^```(?:json)?\\s*/i, '')\n    .replace(/\\s*```$/i, '')\n    .trim();\n}"
+        "jsCode": "/**\n * Converts the AI result into the Join task shape and Firestore REST payload.\n */\nconst emailRequest = $(\"Extract email request\").first().json;\nconst aiOutput =\n  $input.first().json.output ?? $input.first().json.text ?? $input.first().json;\n\nlet parsed = {};\n\ntry {\n  parsed =\n    typeof aiOutput === \"string\"\n      ? JSON.parse(stripMarkdownCodeBlock(aiOutput))\n      : aiOutput;\n} catch {\n  parsed = {};\n}\n\nconst categories = new Set([\"user-story\", \"technical-task\"]);\nconst priorities = new Set([\"low\", \"medium\", \"urgent\"]);\nconst fallbackDate = new Date(Date.now() + 7 * 86400000)\n  .toISOString()\n  .slice(0, 10);\n\nconst task = {\n  title: String(parsed.title || emailRequest.subject || \"Stakeholder request\")\n    .trim()\n    .slice(0, 120),\n\n  description:\n    \"[AI-generated from stakeholder email]\\n\\n\" +\n    String(parsed.description || emailRequest.body).trim(),\n\n  dueDate: /^\\d{4}-\\d{2}-\\d{2}$/.test(String(parsed.dueDate || \"\"))\n    ? parsed.dueDate\n    : fallbackDate,\n\n  priority: priorities.has(parsed.priority) ? parsed.priority : \"medium\",\n\n  status: \"triage\",\n\n  category: categories.has(parsed.category) ? parsed.category : \"user-story\",\n\n  assignedTo: [],\n  subtasks: [],\n  source: \"email\",\n\n  creator: {\n    type: \"external\",\n    name: emailRequest.senderName,\n    email: emailRequest.senderEmail,\n    uid: \"\",\n  },\n};\n\nconst firestoreDocument = {\n  fields: {\n    title: { stringValue: task.title },\n    description: { stringValue: task.description },\n    dueDate: { stringValue: task.dueDate },\n    priority: { stringValue: task.priority },\n    status: { stringValue: task.status },\n    category: { stringValue: task.category },\n    assignedTo: { arrayValue: { values: [] } },\n    subtasks: { arrayValue: { values: [] } },\n    source: { stringValue: task.source },\n\n    creator: {\n      mapValue: {\n        fields: {\n          type: { stringValue: task.creator.type },\n          name: { stringValue: task.creator.name },\n          email: { stringValue: task.creator.email },\n          uid: { stringValue: task.creator.uid },\n        },\n      },\n    },\n\n    createdAt: { timestampValue: new Date().toISOString() },\n    updatedAt: { timestampValue: new Date().toISOString() },\n  },\n};\n\nreturn [\n  {\n    json: {\n      task,\n      firestoreDocument,\n      emailRequest,\n    },\n  },\n];\n\n/**\n * Removes Markdown code fences from the AI response.\n * @param {string} value\n * @returns {string}\n */\nfunction stripMarkdownCodeBlock(value) {\n  return String(value)\n    .trim()\n    .replace(/^```(?:json)?\\s*/i, \"\")\n    .replace(/\\s*```$/i, \"\")\n    .trim();\n}\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        64
+        176,
+        -64
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a008",
+      "id": "cece9b05-c349-4f5a-828d-8c9727fc0a16",
       "name": "Prepare Firestore task"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://firestore.googleapis.com/v1/projects/join-issue-collector-b5f54/databases/(default)/documents/tasks",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Sign in n8n bot').first().json.idToken }}"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { fields: { title: { stringValue: $json.task.title }, description: { stringValue: $json.task.description }, dueDate: { stringValue: $json.task.dueDate }, priority: { stringValue: $json.task.priority }, status: { stringValue: $json.task.status }, category: { stringValue: $json.task.category }, assignedTo: { arrayValue: { values: [] } }, subtasks: { arrayValue: { values: [] } }, source: { stringValue: $json.task.source }, creator: { mapValue: { fields: { type: { stringValue: $json.task.creator.type }, name: { stringValue: $json.task.creator.name }, email: { stringValue: $json.task.creator.email }, uid: { stringValue: $json.task.creator.uid } } } }, createdAt: { timestampValue: new Date().toISOString() }, updatedAt: { timestampValue: new Date().toISOString() } } } }}",
+        "jsonBody": "={{ JSON.stringify($('Prepare Firestore task').first().json.firestoreDocument) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        1344,
-        64
+        624,
+        -64
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a009",
-      "name": "Create Firestore ticket",
-      "credentials": {
-        "oAuth2Api": {
-          "id": "REPLACE_IN_N8N",
-          "name": "Firestore service account"
-        }
-      }
+      "id": "9fd73985-7e74-479c-9a1b-2812cc079f33",
+      "name": "Create Firestore ticket"
     },
     {
       "parameters": {
-        "resource": "message",
-        "operation": "send",
         "sendTo": "={{ $('Extract email request').first().json.senderEmail }}",
         "subject": "Join request received",
         "message": "={{ 'Thanks, your request was received and created as a triage ticket. Subject: ' + $('Extract email request').first().json.subject }}",
@@ -175,22 +154,21 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1568,
-        64
+        848,
+        -64
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a010",
+      "id": "ae3c5d91-bfdf-4d57-9535-97887c90cd25",
       "name": "Send confirmation email",
+      "webhookId": "98739865-d89e-42bf-aee6-a3d6bcd4be95",
       "credentials": {
         "gmailOAuth2": {
-          "id": "REPLACE_IN_N8N",
-          "name": "Join stakeholder inbox"
+          "name": "Gmail account",
+          "id": "REPLACE_IN_N8N"
         }
       }
     },
     {
       "parameters": {
-        "resource": "message",
-        "operation": "send",
         "sendTo": "={{ $json.senderEmail }}",
         "subject": "Join daily request limit reached",
         "message": "The daily 10-request automation limit has been reached. Your email can still be reviewed manually by the team.",
@@ -199,15 +177,125 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        896,
-        384
+        -112,
+        224
       ],
-      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a011",
+      "id": "757c31dc-6f0a-447e-b88f-c1eed70e84ed",
       "name": "Send limit email",
+      "webhookId": "6038e915-0d7c-4dd2-9edd-51041c85c6bd",
       "credentials": {
         "gmailOAuth2": {
-          "id": "REPLACE_IN_N8N",
-          "name": "Join stakeholder inbox"
+          "name": "Gmail account",
+          "id": "REPLACE_IN_N8N"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=REPLACE_IN_N8N_FIREBASE_WEB_API_KEY",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { email: 'n8n-bot@join.local', password: 'REPLACE_IN_N8N_FIREBASE_BOT_PASSWORD', returnSecureToken: true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        400,
+        -64
+      ],
+      "id": "23bb97f7-9044-4544-a606-7684d8c353d6",
+      "name": "Sign in n8n bot"
+    },
+    {
+      "parameters": {
+        "model": "gemma4:26b",
+        "options": {
+          "think": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        64
+      ],
+      "id": "61aef5e6-7381-43ec-8052-1c645a37b990",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "name": "Ollama account",
+          "id": "REPLACE_IN_N8N"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "labelIds": [
+          "INBOX"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        -64
+      ],
+      "id": "606ef55c-d43c-4b60-9f3e-4177d154ef0d",
+      "name": "Archive processed email",
+      "webhookId": "66616d6f-d7a6-4ce8-aee8-aa2f30160b7a",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account",
+          "id": "REPLACE_IN_N8N"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "labelIds": [
+          "REPLACE_IN_N8N_GMAIL_DONE_LABEL_ID"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1072,
+        -64
+      ],
+      "id": "489a825e-2dbc-401c-8400-e65158b43e24",
+      "name": "Label processed email",
+      "webhookId": "9de26c9b-ac0b-420c-bdf5-01e0d65a3c5d",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account",
+          "id": "REPLACE_IN_N8N"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Extract email request').first().json.messageId }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1520,
+        -64
+      ],
+      "id": "6346a260-c866-46d5-a694-18ae1a9c68a3",
+      "name": "Mark processed email as read",
+      "webhookId": "503c3127-c81b-4e96-9e97-0263eb853cfb",
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail account",
+          "id": "REPLACE_IN_N8N"
         }
       }
     }
@@ -276,22 +364,11 @@
         ]
       ]
     },
-    "OpenAI chat model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Classify request with AI",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Prepare Firestore task": {
       "main": [
         [
           {
-            "node": "Create Firestore ticket",
+            "node": "Sign in n8n bot",
             "type": "main",
             "index": 0
           }
@@ -308,16 +385,67 @@
           }
         ]
       ]
+    },
+    "Sign in n8n bot": {
+      "main": [
+        [
+          {
+            "node": "Create Firestore ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify request with AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send confirmation email": {
+      "main": [
+        [
+          {
+            "node": "Label processed email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive processed email": {
+      "main": [
+        [
+          {
+            "node": "Mark processed email as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label processed email": {
+      "main": [
+        [
+          {
+            "node": "Archive processed email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
-  "versionId": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a012",
-  "meta": {
-    "templateCredsSetupCompleted": false
-  },
-  "id": "join-issue-collector-email-to-triage",
   "tags": []
 }

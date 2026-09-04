@@ -32,6 +32,8 @@ test("allows Triage and validates immutable task origin metadata", () => {
   assert.match(firestoreRules, /data\.status in \['triage', 'todo'/);
   assert.match(firestoreRules, /'source', 'creator'/);
   assert.match(firestoreRules, /data\.creator\.uid == request\.auth\.uid/);
+  assert.match(firestoreRules, /isEmailTaskFromN8nBot\(data\)/);
+  assert.match(firestoreRules, /request\.auth\.token\.email == 'n8n-bot@join\.local'/);
   assert.match(firestoreRules, /taskOriginUnchanged\(\)/);
 });
 

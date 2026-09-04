@@ -110,6 +110,12 @@ service cloud.firestore {
         data.creator.uid == request.auth.uid;
     }
 
+    function isEmailTaskFromN8nBot(data) {
+      return data.source == 'email' &&
+        data.creator.type == 'external' &&
+        request.auth.token.email == 'n8n-bot@join.local';
+    }
+
     function taskOriginUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys()
         .hasAny(['source', 'creator']);
@@ -156,7 +162,8 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
         isValidTask(request.resource.data) &&
-        isManualTaskFromCurrentUser(request.resource.data);
+        (isManualTaskFromCurrentUser(request.resource.data) ||
+          isEmailTaskFromN8nBot(request.resource.data));
       allow update: if isAuthenticated() &&
         isValidTask(request.resource.data) &&
         createdAtUnchanged() &&
