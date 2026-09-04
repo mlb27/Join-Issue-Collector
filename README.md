@@ -265,7 +265,7 @@ The workflow watches unread stakeholder emails, extracts sender, subject and
 body, enforces the public 10-request daily automation limit, classifies the
 request with AI and creates a Firestore ticket in `Triage`. On success it sends
 a confirmation, adds the `erledigt` label, removes `INBOX` and marks the original
-message as read. Failures in AI classification, payload preparation, Firebase bot sign-in, Firestore creation or confirmation delivery are labeled `zu bearbeiten`, removed from `INBOX`, kept unread and followed by an error notification. The limit branch sends a separate notification.
+message as read. Failures in AI classification, payload preparation, Firebase bot sign-in, Firestore creation or confirmation delivery are labeled `zu bearbeiten`, removed from `INBOX`, kept unread and followed by an error notification. The limit branch sends a separate notification and moves the unread request to `zu bearbeiten` without creating a ticket.
 
 Credential IDs, the Firebase Web API key, the Firebase bot password and Gmail
 label IDs are placeholders in the committed JSON. Configure them only inside

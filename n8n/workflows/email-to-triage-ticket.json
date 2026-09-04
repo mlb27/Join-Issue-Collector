@@ -99,7 +99,7 @@
       "typeVersion": 1.6,
       "position": [
         -176,
-        464
+        560
       ],
       "id": "ae13d86b-6771-489a-ad5e-4a9848fa7f0d",
       "name": "Classify request with AI",
@@ -182,7 +182,7 @@
       "typeVersion": 2.1,
       "position": [
         -112,
-        864
+        1024
       ],
       "id": "757c31dc-6f0a-447e-b88f-c1eed70e84ed",
       "name": "Send limit email",
@@ -224,7 +224,7 @@
       "typeVersion": 1,
       "position": [
         -104,
-        680
+        792
       ],
       "id": "61aef5e6-7381-43ec-8052-1c645a37b990",
       "name": "Ollama Model",
@@ -306,6 +306,29 @@
     },
     {
       "parameters": {
+        "sendTo": "={{ $('Extract email request').first().json.senderEmail }}",
+        "subject": "Join request needs manual review",
+        "message": "={{ 'Your request could not be processed automatically and was forwarded for manual review. Subject: ' + $('Extract email request').first().json.subject }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1520,
+        640
+      ],
+      "id": "c13f2269-f2c8-41f0-8e57-084448d99076",
+      "name": "Send processing error email",
+      "webhookId": "98739865-d89e-42bf-aee6-a3d6bcd4be95",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
         "operation": "addLabels",
         "messageId": "={{ $('Extract email request').first().json.messageId }}",
         "labelIds": [
@@ -316,34 +339,11 @@
       "typeVersion": 2.2,
       "position": [
         1072,
-        656
+        640
       ],
       "id": "edc56463-61d4-4722-b088-5925443695af",
       "name": "Label failed email",
       "webhookId": "9de26c9b-ac0b-420c-bdf5-01e0d65a3c5d",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "REPLACE_IN_N8N",
-          "name": "Gmail account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "sendTo": "={{ $('Extract email request').first().json.senderEmail }}",
-        "subject": "Join request needs manual review",
-        "message": "={{ 'Your request could not be processed automatically and was forwarded for manual review. Subject: ' + $('Extract email request').first().json.subject }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        1520,
-        656
-      ],
-      "id": "c13f2269-f2c8-41f0-8e57-084448d99076",
-      "name": "Send processing error email",
-      "webhookId": "98739865-d89e-42bf-aee6-a3d6bcd4be95",
       "credentials": {
         "gmailOAuth2": {
           "id": "REPLACE_IN_N8N",
@@ -363,10 +363,58 @@
       "typeVersion": 2.2,
       "position": [
         1296,
-        656
+        640
       ],
       "id": "ca981906-b205-4071-9b48-5bb5a14a9e8d",
       "name": "Archive failed email",
+      "webhookId": "66616d6f-d7a6-4ce8-aee8-aa2f30160b7a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "labelIds": [
+          "REPLACE_IN_N8N_GMAIL_FAILED_LABEL_ID"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        1024
+      ],
+      "id": "538d143b-40bc-4320-8249-3b082900da02",
+      "name": "Label limited email",
+      "webhookId": "9de26c9b-ac0b-420c-bdf5-01e0d65a3c5d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "labelIds": [
+          "INBOX"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        1024
+      ],
+      "id": "aa10f63b-0cab-4889-adce-e7a00d382b01",
+      "name": "Archive limited email",
       "webhookId": "66616d6f-d7a6-4ce8-aee8-aa2f30160b7a",
       "credentials": {
         "gmailOAuth2": {
@@ -568,6 +616,28 @@
         [
           {
             "node": "Send processing error email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send limit email": {
+      "main": [
+        [
+          {
+            "node": "Label limited email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label limited email": {
+      "main": [
+        [
+          {
+            "node": "Archive limited email",
             "type": "main",
             "index": 0
           }

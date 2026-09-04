@@ -163,6 +163,29 @@ test("routes processing errors to manual review", () => {
   ]);
 });
 
+test("routes requests over the daily limit to manual review", () => {
+  const workflow = readWorkflow();
+  const quotaNode = workflow.nodes.find((node) => node.name === "Check daily request limit");
+  const limitMailNode = workflow.nodes.find((node) => node.name === "Send limit email");
+  const labelNode = workflow.nodes.find((node) => node.name === "Label limited email");
+  const archiveNode = workflow.nodes.find((node) => node.name === "Archive limited email");
+
+  assert.match(quotaNode.parameters.jsCode, /const dailyLimit = 10;/);
+  assert.deepEqual(workflow.connections["Is automation allowed?"].main[1], [
+    { node: "Send limit email", type: "main", index: 0 },
+  ]);
+  assert.equal(limitMailNode.parameters.subject, "Join daily request limit reached");
+  assert.deepEqual(labelNode.parameters.labelIds, ["REPLACE_IN_N8N_GMAIL_FAILED_LABEL_ID"]);
+  assert.deepEqual(archiveNode.parameters.labelIds, ["INBOX"]);
+  assert.deepEqual(workflow.connections["Send limit email"].main[0], [
+    { node: "Label limited email", type: "main", index: 0 },
+  ]);
+  assert.deepEqual(workflow.connections["Label limited email"].main[0], [
+    { node: "Archive limited email", type: "main", index: 0 },
+  ]);
+  assert.equal(workflow.connections["Archive limited email"], undefined);
+});
+
 test("keeps n8n workflow exports free of committed secrets", () => {
   const workflowSource = fs.readFileSync(workflowPath, "utf8");
 
