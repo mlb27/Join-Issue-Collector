@@ -251,6 +251,11 @@ credentials inside n8n:
 - `OpenAI account` or a compatible AI model credential for classification
 - `Firestore service account` for server-side ticket creation
 
+The Firestore HTTP node needs a Google OAuth2 credential with access to the
+Cloud Firestore API, for example the datastore scope:
+`https://www.googleapis.com/auth/datastore`. This credential is intentionally
+not part of the exported workflow and must be created inside n8n.
+
 The current stakeholder inbox is:
 
 ```text

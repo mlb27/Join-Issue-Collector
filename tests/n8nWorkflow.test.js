@@ -68,3 +68,14 @@ test("keeps n8n workflow exports free of committed secrets", () => {
   assert.doesNotMatch(workflowSource, /password/i);
   assert.match(workflowSource, /REPLACE_IN_N8N/);
 });
+
+
+test("keeps exported n8n credentials as placeholders", () => {
+  const workflow = readWorkflow();
+  const credentialIds = workflow.nodes.flatMap((node) =>
+    Object.values(node.credentials || {}).map((credential) => credential.id),
+  );
+
+  assert.ok(credentialIds.length > 0);
+  credentialIds.forEach((id) => assert.equal(id, "REPLACE_IN_N8N"));
+});
