@@ -51,6 +51,7 @@ No public deployment URL is configured for this fork yet.
 - [Requirements](#requirements)
 - [Quickstart](#quickstart)
 - [Firebase Setup](#firebase-setup)
+- [n8n Setup](#n8n-setup)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
 - [Automated Tests](#automated-tests)
@@ -85,6 +86,7 @@ No public deployment URL is configured for this fork yet.
 | Firebase Authentication | Email/password and anonymous guest authentication              |
 | Cloud Firestore         | Shared task and contact persistence                            |
 | Firebase Hosting        | Public deployment of the application                           |
+| n8n                     | Email intake, AI classification and notification workflow       |
 | Node.js test runner     | Automated tests for central application logic                  |
 
 ## Application Architecture
@@ -111,6 +113,7 @@ and feature-specific interactions into focused files.
 - Node.js when running the automated tests or Firebase CLI commands
 - An internet connection for Firebase Authentication and Firestore
 - Access to the `join-issue-collector-b5f54` Firebase project for local Firebase setup
+- A local or hosted n8n instance for the email collector workflow
 
 When a hosted demo is available, it can be opened without a local installation.
 
@@ -231,6 +234,40 @@ only the hostname, without `http://`, a port or a path.
 This warning primarily affects OAuth popup and redirect operations. It does
 not mean that credentials should be added to the repository.
 
+## n8n Setup
+
+The repository contains a first importable n8n workflow for the stakeholder
+email collector:
+
+```text
+n8n/workflows/email-to-triage-ticket.json
+```
+
+The workflow is inactive by default and contains no secrets. Import it through
+**Import from File** in a local or hosted n8n instance, then create the required
+credentials inside n8n:
+
+- `Join stakeholder inbox` for the Gmail trigger and outgoing emails
+- `OpenAI account` or a compatible AI model credential for classification
+- `Firestore service account` for server-side ticket creation
+
+The current stakeholder inbox is:
+
+```text
+join.issue.collector.mail@gmail.com
+```
+
+The workflow is prepared to watch unread stakeholder emails, extract sender,
+subject and body, enforce the public 10-request daily automation limit, classify
+the request with AI and create a Firestore ticket in `Triage`. Confirmation and
+limit emails are included as separate workflow steps.
+
+Before activating the workflow in a real n8n instance, replace placeholder
+credentials, test the Gmail trigger with **Listen for test event**, and verify
+that the Firestore write node stores documents with `source: "email"` and an
+external `creator` object. Secrets must stay in n8n credentials and must not be
+exported into the JSON file.
+
 ## Usage
 
 - Create an account or use the guest login.
@@ -267,6 +304,8 @@ Guest and authenticated users work with the same shared Firestore data set.
 |       |-- firebaseTasks.mjs
 |       `-- feature and store modules
 |-- tests/
+|-- n8n/
+|   `-- workflows/
 |-- addTask.html
 |-- board.html
 |-- contacts.html

@@ -50,7 +50,7 @@ test("explains email ticket creation and provides the public actions", () => {
   assert.match(page, /<main class="stakeholder-page">/);
   assert.match(page, /0 of 10 requests used today/);
   assert.match(page, /Our AI system will automatically generate a ticket/);
-  assert.match(page, /href="mailto:/);
+  assert.match(page, /href="mailto:join\.issue\.collector\.mail@gmail\.com\?subject=Join%20issue%20request"/);
   assert.match(page, />\s*Create request\s*</);
   assert.match(page, /data-page="welcome"/);
   assert.match(page, /href="\.\/privacyPolicy\.html"/);

@@ -1,0 +1,225 @@
+{
+  "name": "Email to Triage Ticket",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "readStatus": "unread",
+          "includeSpamTrash": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [0, 160],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a001",
+      "name": "Watch stakeholder inbox",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Join stakeholder inbox"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Extracts the sender, subject and message body from a Gmail trigger item.\n * The workflow keeps only normalized text values so later nodes never need\n * direct access to the raw email payload.\n */\nconst email = $input.first().json;\nconst headers = email.headers ?? {};\nconst from = String(email.from ?? headers.from ?? '').trim();\nconst subject = String(email.subject ?? headers.subject ?? 'Untitled request').trim();\nconst text = String(email.textPlain ?? email.text ?? email.snippet ?? '').trim();\nconst html = String(email.textHtml ?? email.html ?? '').replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim();\nconst body = text || html || 'No email body was provided.';\nconst senderEmail = (from.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i) ?? [''])[0];\nconst senderName = from.replace(/<[^>]+>/g, '').replace(senderEmail, '').replace(/[\"<>]/g, '').trim() || senderEmail || 'External stakeholder';\n\nreturn [{\n  json: {\n    messageId: email.id ?? email.messageId ?? '',\n    threadId: email.threadId ?? '',\n    senderName,\n    senderEmail,\n    subject,\n    body,\n    receivedAt: new Date().toISOString(),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 160],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a002",
+      "name": "Extract email request"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Applies the public daily automation limit.\n * The starter workflow stores the counter in n8n workflow static data; a\n * production setup can replace this with Firestore or another durable store.\n */\nconst request = $input.first().json;\nconst data = $getWorkflowStaticData('global');\nconst today = new Date().toISOString().slice(0, 10);\nif (data.requestQuotaDate !== today) {\n  data.requestQuotaDate = today;\n  data.requestQuotaUsed = 0;\n}\nconst used = Number(data.requestQuotaUsed ?? 0);\nconst dailyLimit = 10;\nconst limitReached = used >= dailyLimit;\nif (!limitReached) data.requestQuotaUsed = used + 1;\n\nreturn [{\n  json: {\n    ...request,\n    quota: {\n      date: today,\n      used: limitReached ? used : used + 1,\n      dailyLimit,\n      limitReached,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 160],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a003",
+      "name": "Check daily request limit"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a004",
+              "leftValue": "={{ $json.quota.limitReached }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [672, 160],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a005",
+      "name": "Is automation allowed?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Classify this Join issue email. Return only JSON with title, category, priority, dueDate and description. Allowed category values: user-story, technical-task. Allowed priority values: low, medium, urgent. Use YYYY-MM-DD for dueDate. Sender: ' + $json.senderName + ' <' + $json.senderEmail + '> Subject: ' + $json.subject + ' Body: ' + $json.body }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [896, 64],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a006",
+      "name": "Classify request with AI"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [896, 288],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a007",
+      "name": "OpenAI chat model",
+      "credentials": {
+        "openAiApi": {
+          "id": "REPLACE_IN_N8N",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Converts the AI result into the Join task shape stored in Firestore.\n * The description always starts with an AI notice so the board remains clear\n * about automatically generated ticket content.\n */\nconst emailRequest = $('Extract email request').first().json;\nconst aiOutput = $input.first().json.output ?? $input.first().json.text ?? $input.first().json;\nlet parsed = {};\ntry {\n  parsed = typeof aiOutput === 'string' ? JSON.parse(aiOutput) : aiOutput;\n} catch {\n  parsed = {};\n}\nconst categories = new Set(['user-story', 'technical-task']);\nconst priorities = new Set(['low', 'medium', 'urgent']);\nconst fallbackDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);\nconst title = String(parsed.title || emailRequest.subject || 'Stakeholder request').trim().slice(0, 120);\nconst category = categories.has(parsed.category) ? parsed.category : 'user-story';\nconst priority = priorities.has(parsed.priority) ? parsed.priority : 'medium';\nconst dueDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(parsed.dueDate || '')) ? parsed.dueDate : fallbackDate;\nconst generatedDescription = String(parsed.description || emailRequest.body).trim();\n\nreturn [{\n  json: {\n    task: {\n      title,\n      description: `[AI-generated from stakeholder email]\\n\\n${generatedDescription}`,\n      dueDate,\n      priority,\n      status: 'triage',\n      category,\n      assignedTo: [],\n      subtasks: [],\n      source: 'email',\n      creator: {\n        type: 'external',\n        name: emailRequest.senderName,\n        email: emailRequest.senderEmail,\n        uid: '',\n      },\n    },\n    emailRequest,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 64],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a008",
+      "name": "Prepare Firestore task"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://firestore.googleapis.com/v1/projects/join-issue-collector-b5f54/databases/(default)/documents/tasks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { fields: { title: { stringValue: $json.task.title }, description: { stringValue: $json.task.description }, dueDate: { stringValue: $json.task.dueDate }, priority: { stringValue: $json.task.priority }, status: { stringValue: $json.task.status }, category: { stringValue: $json.task.category }, assignedTo: { arrayValue: { values: [] } }, subtasks: { arrayValue: { values: [] } }, source: { stringValue: $json.task.source }, creator: { mapValue: { fields: { type: { stringValue: $json.task.creator.type }, name: { stringValue: $json.task.creator.name }, email: { stringValue: $json.task.creator.email }, uid: { stringValue: $json.task.creator.uid } } } }, createdAt: { timestampValue: new Date().toISOString() }, updatedAt: { timestampValue: new Date().toISOString() } } } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1344, 64],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a009",
+      "name": "Create Firestore ticket",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Firestore service account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Extract email request').first().json.senderEmail }}",
+        "subject": "Join request received",
+        "message": "={{ 'Thanks, your request was received and created as a triage ticket. Subject: ' + $('Extract email request').first().json.subject }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1568, 64],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a010",
+      "name": "Send confirmation email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Join stakeholder inbox"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.senderEmail }}",
+        "subject": "Join daily request limit reached",
+        "message": "The daily 10-request automation limit has been reached. Your email can still be reviewed manually by the team.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [896, 384],
+      "id": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a011",
+      "name": "Send limit email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Join stakeholder inbox"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Watch stakeholder inbox": {
+      "main": [[{ "node": "Extract email request", "type": "main", "index": 0 }]]
+    },
+    "Extract email request": {
+      "main": [[{ "node": "Check daily request limit", "type": "main", "index": 0 }]]
+    },
+    "Check daily request limit": {
+      "main": [[{ "node": "Is automation allowed?", "type": "main", "index": 0 }]]
+    },
+    "Is automation allowed?": {
+      "main": [
+        [{ "node": "Classify request with AI", "type": "main", "index": 0 }],
+        [{ "node": "Send limit email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Classify request with AI": {
+      "main": [[{ "node": "Prepare Firestore task", "type": "main", "index": 0 }]]
+    },
+    "OpenAI chat model": {
+      "ai_languageModel": [[{ "node": "Classify request with AI", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Prepare Firestore task": {
+      "main": [[{ "node": "Create Firestore ticket", "type": "main", "index": 0 }]]
+    },
+    "Create Firestore ticket": {
+      "main": [[{ "node": "Send confirmation email", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8f7c19a4-9e10-4b5b-9c41-2ed082d0a012",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "join-issue-collector-email-to-triage",
+  "tags": []
+}
