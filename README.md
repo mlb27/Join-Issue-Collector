@@ -2,7 +2,7 @@
 
 <img src="./components/assets/img/icons/Join%20logo%20vector.svg" height="96" alt="Join logo" />
 
-# Join 360
+# Join Issue Collector
 
 </div>
 
@@ -28,15 +28,16 @@
 
 <div align="center">
 
-Join is a responsive Kanban project management application for organizing tasks,
-tracking progress and collaborating through a shared Firebase data store.
-It provides authenticated and guest access to the same board, contacts and task workflow.
+Join Issue Collector extends the original Join Kanban project with a public
+stakeholder entry and a triage-first issue workflow. It remains a responsive
+Vanilla JavaScript application with authenticated and guest access to the same
+Firebase-backed board, contacts and task data.
 
 </div>
 
 ## Live Demo
 
-[Open Join 360](https://join-teamjob.web.app/)
+No public deployment URL is configured for this fork yet.
 
 ## Preview
 
@@ -64,7 +65,8 @@ It provides authenticated and guest access to the same board, contacts and task 
 | Guest access      | Test the application anonymously while using the shared task and contact data.                |
 | Summary           | View live task totals, status metrics, urgent tasks and the next upcoming deadline.           |
 | Add Task          | Create tasks with a title, description, due date, priority, category, assignees and subtasks. |
-| Board             | Organize tasks across To do, In progress, Await feedback and Done.                            |
+| Stakeholder entry | Explain external issue creation through a public stakeholder page.                            |
+| Board             | Organize tasks across Triage, To do, In progress, Await feedback and Done.                    |
 | Task editing      | Edit, move and delete existing tasks directly from the board.                                 |
 | Subtasks          | Add, edit, remove and complete individual subtasks.                                           |
 | Search            | Filter board cards by task title or description.                                              |
@@ -108,22 +110,22 @@ and feature-specific interactions into focused files.
 - A local development server, such as the VS Code Live Server extension
 - Node.js when running the automated tests or Firebase CLI commands
 - An internet connection for Firebase Authentication and Firestore
-- Access to the shared `join-teamjob` Firebase project for local Firebase setup
+- Access to the `join-issue-collector-b5f54` Firebase project for local Firebase setup
 
-The hosted live demo can be opened without a local installation.
+When a hosted demo is available, it can be opened without a local installation.
 
 ## Quickstart
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/willidevac/Join.git
+git clone https://github.com/mlb27/Join-Issue-Collector.git
 ```
 
 2. Open the project directory:
 
 ```bash
-cd Join
+cd Join-Issue-Collector
 ```
 
 3. Complete the local [Firebase setup](#firebase-setup).
@@ -151,8 +153,8 @@ components/js/firebase/firebaseConfig.js
 ```
 
 This file is intentionally ignored by Git and must never be committed. Each
-team member needs access to the Firebase project `join-teamjob` and creates the
-file locally.
+developer creates it locally for the Firebase project
+`join-issue-collector-b5f54`.
 
 ### Retrieve the configuration with the Firebase CLI
 
@@ -163,18 +165,18 @@ node --version
 npx -y firebase-tools@latest --version
 ```
 
-Sign in and select the shared project:
+Sign in and select the Issue Collector project:
 
 ```powershell
 npx -y firebase-tools@latest login
 npx -y firebase-tools@latest projects:list
-npx -y firebase-tools@latest use join-teamjob
+npx -y firebase-tools@latest use join-issue-collector-b5f54
 ```
 
 List the registered apps and copy the App ID of the `WEB` app:
 
 ```powershell
-npx -y firebase-tools@latest apps:list --project join-teamjob
+npx -y firebase-tools@latest apps:list --project join-issue-collector-b5f54
 $appId = "PASTE_THE_WEB_APP_ID_HERE"
 ```
 
@@ -182,7 +184,7 @@ Retrieve the SDK configuration and create the ignored local file:
 
 ```powershell
 $config = (
-  npx -y firebase-tools@latest apps:sdkconfig WEB $appId --project join-teamjob |
+  npx -y firebase-tools@latest apps:sdkconfig WEB $appId --project join-issue-collector-b5f54 |
   Out-String
 ).Trim()
 
@@ -199,9 +201,9 @@ Select-String -Path .\components\js\firebase\firebaseConfig.js -Pattern "project
 git check-ignore -v .\components\js\firebase\firebaseConfig.js
 ```
 
-The configuration must reference the Firebase project `join-teamjob`. If the
-project does not appear in `projects:list`, ask a Firebase project owner to add
-your Google account. Do not create a separate Firebase project for local work.
+The configuration must reference the Firebase project
+`join-issue-collector-b5f54`. If the project does not appear in
+`projects:list`, ask a Firebase project owner to add your Google account.
 
 Without the local configuration file, email/password login, guest login,
 Firestore tasks and Firestore contacts are unavailable.
@@ -235,7 +237,7 @@ not mean that credentials should be added to the repository.
 - Review task totals and the next deadline on the Summary page.
 - Create a task through Add Task or from a Board column.
 - Assign contacts, choose a priority and add subtasks.
-- Move task cards between the four workflow columns.
+- Move task cards between the five workflow columns.
 - Open a task card to edit its data or complete individual subtasks.
 - Search the board by task title or description.
 - Manage contacts from the Contacts page.
@@ -300,11 +302,8 @@ node --test
 
 ## Deployment
 
-The application is deployed with Firebase Hosting:
-
-```text
-https://join-teamjob.web.app/
-```
+The application is prepared for Firebase Hosting. A public deployment URL has
+not been configured for this fork yet.
 
 Before a deployment, verify the working tree, run the automated tests and test
 the main user stories on desktop and mobile resolutions.
