@@ -264,9 +264,15 @@ join.issue.collector.mail@gmail.com
 
 The workflow watches unread stakeholder emails, extracts sender, subject and
 body, enforces the public 10-request daily automation limit, classifies the
-request with AI and creates a Firestore ticket in `Triage`. On success it sends
-a confirmation, adds the `erledigt` label, removes `INBOX` and marks the original
-message as read. Failures in AI classification, payload preparation, Firebase bot sign-in, Firestore creation or confirmation delivery are labeled `zu bearbeiten`, removed from `INBOX`, kept unread and followed by an error notification. The limit branch sends a separate notification and moves the unread request to `zu bearbeiten` without creating a ticket.
+request with AI and creates a Firestore ticket in `Triage`. Every Gmail item is
+processed independently when one poll returns several messages. Daily slots are
+reserved before the AI call so failed attempts cannot bypass the cost-protection
+limit. On success the workflow sends a confirmation, adds the `erledigt` label,
+removes `INBOX` and marks the original message as read. Malformed or incomplete
+AI output, invalid deadlines and technical failures are labeled `zu bearbeiten`,
+removed from `INBOX`, kept unread and followed by an error notification. The
+limit branch sends a separate notification and moves the unread request to
+`zu bearbeiten` without creating a ticket.
 
 Credential IDs, the Firebase Web API key, the Firebase bot password and Gmail
 label IDs are placeholders in the committed JSON. Configure them only inside

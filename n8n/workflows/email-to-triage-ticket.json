@@ -32,7 +32,8 @@
     },
     {
       "parameters": {
-        "jsCode": "/**\n * Extracts the sender, subject and message body from a Gmail trigger item.\n * The workflow keeps only normalized text values so later nodes never need\n * direct access to the raw email payload.\n */\nconst email = $input.first().json;\nconst headers = email.headers ?? {};\n\nconst from = String(\n  email.from ?? email.From ?? headers.from ?? headers.From ?? '',\n).trim();\n\nconst subject = String(\n  email.subject ?? email.Subject ?? headers.subject ?? headers.Subject ?? 'Untitled request',\n).trim();\n\nconst text = String(\n  email.textPlain ?? email.text ?? email.snippet ?? email.Snippet ?? '',\n).trim();\n\nconst html = String(email.textHtml ?? email.html ?? email.Html ?? '')\n  .replace(/<[^>]*>/g, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst body = text || html || 'No email body was provided.';\nconst senderEmail = (from.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i) ?? [''])[0];\nconst senderName = from.replace(/<[^>]+>/g, '').replace(senderEmail, '').replace(/[\"<>]/g, '').trim() || senderEmail || 'External stakeholder';\n\nreturn [{\n  json: {\n    messageId: email.id ?? email.messageId ?? '',\n    threadId: email.threadId ?? '',\n    senderName,\n    senderEmail,\n    subject,\n    body,\n    receivedAt: new Date().toISOString(),\n  },\n}];"
+        "jsCode": "/**\n   * Extracts the sender, subject and message body from one Gmail trigger item.\n   * Running once per item preserves n8n's item link when a poll returns several\n   * stakeholder emails at the same time.\n   */\n  const email = $json;\n  const headers = email.headers ?? {};\n\n  const from = String(\n    email.from ?? email.From ?? headers.from ?? headers.From ?? \"\",\n  ).trim();\n  const subject = String(\n    email.subject ?? email.Subject ?? headers.subject ?? headers.Subject ?? \"Untitled request\",\n  ).trim();\n  const text = String(\n    email.textPlain ?? email.text ?? email.snippet ?? email.Snippet ?? \"\",\n  ).trim();\n  const html = String(email.textHtml ?? email.html ?? email.Html ?? \"\")\n    .replace(/<[^>]*>/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n\n  const body = text || html || \"No email body was provided.\";\n  const senderEmail = (from.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i) ?? [\"\"])[0];\n  const senderName = from\n    .replace(/<[^>]+>/g, \"\")\n    .replace(senderEmail, \"\")\n    .replace(/[\"<>]/g, \"\")\n    .trim() || senderEmail || \"External stakeholder\";\n\n  return {\n    json: {\n      messageId: email.id ?? email.messageId ?? \"\",\n      threadId: email.threadId ?? \"\",\n      senderName,\n      senderEmail,\n      subject,\n      body,\n      receivedAt: new Date().toISOString(),\n    },\n  };\n",
+        "mode": "runOnceForEachItem"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -45,7 +46,8 @@
     },
     {
       "parameters": {
-        "jsCode": "/**\n * Applies the public daily automation limit.\n * The starter workflow stores the counter in n8n workflow static data; a\n * production setup can replace this with Firestore or another durable store.\n */\nconst request = $input.first().json;\nconst data = $getWorkflowStaticData('global');\nconst today = new Date().toISOString().slice(0, 10);\nif (data.requestQuotaDate !== today) {\n  data.requestQuotaDate = today;\n  data.requestQuotaUsed = 0;\n}\nconst used = Number(data.requestQuotaUsed ?? 0);\nconst dailyLimit = 10;\nconst limitReached = used >= dailyLimit;\nif (!limitReached) data.requestQuotaUsed = used + 1;\n\nreturn [{\n  json: {\n    ...request,\n    quota: {\n      date: today,\n      used: limitReached ? used : used + 1,\n      dailyLimit,\n      limitReached,\n    },\n  },\n}];"
+        "jsCode": "/**\n   * Reserves one of the ten daily automation slots for one email.\n   * Reserving before the AI call prevents concurrent poll items and failed model\n   * calls from bypassing the cost-protection limit.\n   */\n  const request = $json;\n  const data = $getWorkflowStaticData(\"global\");\n  const today = new Date().toISOString().slice(0, 10);\n  if (data.requestQuotaDate !== today) {\n    data.requestQuotaDate = today;\n    data.requestQuotaUsed = 0;\n  }\n  const used = Number(data.requestQuotaUsed ?? 0);\n  const dailyLimit = 10;\n  const limitReached = used >= dailyLimit;\n  if (!limitReached) data.requestQuotaUsed = used + 1;\n\n  return {\n    json: {\n      ...request,\n      quota: {\n        date: today,\n        used: limitReached ? used : used + 1,\n        dailyLimit,\n        limitReached,\n      },\n    },\n  };\n",
+        "mode": "runOnceForEachItem"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -93,7 +95,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "={{ 'Classify this Join issue email. Return only JSON with title, category, priority, dueDate and description. Allowed category values: user-story, technical-task. Allowed priority values: low, medium, urgent. Use YYYY-MM-DD for dueDate. Sender: ' + $json.senderName + ' <' + $json.senderEmail + '> Subject: ' + $json.subject + ' Body: ' + $json.body }}"
+        "text": "={{ 'Classify this Join issue email. Today is ' + $now.toISODate() + '. Return exactly one valid JSON object without Markdown or additional text. Required keys: title, category, priority, dueDate, description. title must be concise and non-empty. category must be user-story or technical-task. priority must be low, medium or urgent. If the email contains an explicit or relative deadline, resolve it against today and return dueDate as YYYY-MM-DD. Otherwise return dueDate as null; never invent a deadline. description must be concise and non-empty. Sender: ' + $json.senderName + ' <' + $json.senderEmail + '> Subject: ' + $json.subject + ' Body: ' + $json.body }}"
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.6,
@@ -107,7 +109,8 @@
     },
     {
       "parameters": {
-        "jsCode": "/**\n * Converts the AI result into the Join task shape and Firestore REST payload.\n */\nconst emailRequest = $(\"Extract email request\").first().json;\nconst aiOutput =\n  $input.first().json.output ?? $input.first().json.text ?? $input.first().json;\n\nlet parsed = {};\n\ntry {\n  parsed =\n    typeof aiOutput === \"string\"\n      ? JSON.parse(stripMarkdownCodeBlock(aiOutput))\n      : aiOutput;\n} catch {\n  parsed = {};\n}\n\nconst categories = new Set([\"user-story\", \"technical-task\"]);\nconst priorities = new Set([\"low\", \"medium\", \"urgent\"]);\nconst fallbackDate = new Date(Date.now() + 7 * 86400000)\n  .toISOString()\n  .slice(0, 10);\n\nconst task = {\n  title: String(parsed.title || emailRequest.subject || \"Stakeholder request\")\n    .trim()\n    .slice(0, 120),\n\n  description:\n    \"[AI-generated from stakeholder email]\\n\\n\" +\n    String(parsed.description || emailRequest.body).trim(),\n\n  dueDate: /^\\d{4}-\\d{2}-\\d{2}$/.test(String(parsed.dueDate || \"\"))\n    ? parsed.dueDate\n    : fallbackDate,\n\n  priority: priorities.has(parsed.priority) ? parsed.priority : \"medium\",\n\n  status: \"triage\",\n\n  category: categories.has(parsed.category) ? parsed.category : \"user-story\",\n\n  assignedTo: [],\n  subtasks: [],\n  source: \"email\",\n\n  creator: {\n    type: \"external\",\n    name: emailRequest.senderName,\n    email: emailRequest.senderEmail,\n    uid: \"\",\n  },\n};\n\nconst firestoreDocument = {\n  fields: {\n    title: { stringValue: task.title },\n    description: { stringValue: task.description },\n    dueDate: { stringValue: task.dueDate },\n    priority: { stringValue: task.priority },\n    status: { stringValue: task.status },\n    category: { stringValue: task.category },\n    assignedTo: { arrayValue: { values: [] } },\n    subtasks: { arrayValue: { values: [] } },\n    source: { stringValue: task.source },\n\n    creator: {\n      mapValue: {\n        fields: {\n          type: { stringValue: task.creator.type },\n          name: { stringValue: task.creator.name },\n          email: { stringValue: task.creator.email },\n          uid: { stringValue: task.creator.uid },\n        },\n      },\n    },\n\n    createdAt: { timestampValue: new Date().toISOString() },\n    updatedAt: { timestampValue: new Date().toISOString() },\n  },\n};\n\nreturn [\n  {\n    json: {\n      task,\n      firestoreDocument,\n      emailRequest,\n    },\n  },\n];\n\n/**\n * Removes Markdown code fences from the AI response.\n * @param {string} value\n * @returns {string}\n */\nfunction stripMarkdownCodeBlock(value) {\n  return String(value)\n    .trim()\n    .replace(/^```(?:json)?\\s*/i, \"\")\n    .replace(/\\s*```$/i, \"\")\n    .trim();\n}\n"
+        "jsCode": "/**\n   * Validates one AI result and converts it into a Join task and Firestore REST\n   * payload. Throwing on malformed model output routes the linked email to the\n   * existing manual-review branch instead of silently creating a fallback task.\n   */\n  const emailRequest = $(\"Extract email request\").item.json;\n  const aiOutput = $json.output ?? $json.text ?? $json;\n  let parsed;\n\n  try {\n    parsed = typeof aiOutput === \"string\"\n      ? JSON.parse(stripMarkdownCodeBlock(aiOutput))\n      : aiOutput;\n  } catch {\n    throw new Error(\"AI response is not valid JSON.\");\n  }\n\n  if (!parsed || typeof parsed !== \"object\" || Array.isArray(parsed)) {\n    throw new Error(\"AI response must be a JSON object.\");\n  }\n\n  const categories = new Set([\"user-story\", \"technical-task\"]);\n  const priorities = new Set([\"low\", \"medium\", \"urgent\"]);\n  const title = String(parsed.title ?? \"\").trim();\n  const description = String(parsed.description ?? \"\").trim();\n  const dueDate = parsed.dueDate;\n\n  if (!title || !description) {\n    throw new Error(\"AI response is missing a title or description.\");\n  }\n  if (!categories.has(parsed.category) || !priorities.has(parsed.priority)) {\n    throw new Error(\"AI response contains an unsupported category or priority.\");\n  }\n  if (dueDate !== null && !isValidIsoDate(dueDate)) {\n    throw new Error(\"AI response contains an invalid deadline.\");\n  }\n\n  const fallbackDate = new Date(Date.now() + 7 * 86400000)\n    .toISOString()\n    .slice(0, 10);\n  const task = {\n    title: title.slice(0, 120),\n    description: \"[AI-generated from stakeholder email]\\n\\n\" + description,\n    dueDate: dueDate ?? fallbackDate,\n    priority: parsed.priority,\n    status: \"triage\",\n    category: parsed.category,\n    assignedTo: [],\n    subtasks: [],\n    source: \"email\",\n    creator: {\n      type: \"external\",\n      name: emailRequest.senderName,\n      email: emailRequest.senderEmail,\n      uid: \"\",\n    },\n  };\n\n  const firestoreDocument = {\n    fields: {\n      title: { stringValue: task.title },\n      description: { stringValue: task.description },\n      dueDate: { stringValue: task.dueDate },\n      priority: { stringValue: task.priority },\n      status: { stringValue: task.status },\n      category: { stringValue: task.category },\n      assignedTo: { arrayValue: { values: [] } },\n      subtasks: { arrayValue: { values: [] } },\n      source: { stringValue: task.source },\n      creator: {\n        mapValue: {\n          fields: {\n            type: { stringValue: task.creator.type },\n            name: { stringValue: task.creator.name },\n            email: { stringValue: task.creator.email },\n            uid: { stringValue: task.creator.uid },\n          },\n        },\n      },\n      createdAt: { timestampValue: new Date().toISOString() },\n      updatedAt: { timestampValue: new Date().toISOString() },\n    },\n  };\n\n  return { json: { task, firestoreDocument, emailRequest } };\n\n  /**\n   * Removes Markdown code fences from an otherwise valid JSON response.\n   * @param {string} value - Raw AI response.\n   * @returns {string} JSON without surrounding Markdown fences.\n   */\n  function stripMarkdownCodeBlock(value) {\n    return String(value)\n      .trim()\n      .replace(/^```(?:json)?\\s*/i, \"\")\n      .replace(/\\s*```$/i, \"\")\n      .trim();\n  }\n\n  /**\n   * Checks both the format and calendar validity of an AI deadline.\n   * @param {*} value - Candidate deadline.\n   * @returns {boolean} Whether the value is a real YYYY-MM-DD date.\n   */\n  function isValidIsoDate(value) {\n    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value))) return false;\n    const date = new Date(value + \"T00:00:00Z\");\n    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;\n  }\n",
+        "mode": "runOnceForEachItem"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -128,13 +131,13 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('Sign in n8n bot').first().json.idToken }}"
+              "value": "={{ 'Bearer ' + $('Sign in n8n bot').item.json.idToken }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($('Prepare Firestore task').first().json.firestoreDocument) }}",
+        "jsonBody": "={{ JSON.stringify($('Prepare Firestore task').item.json.firestoreDocument) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -149,9 +152,9 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $('Extract email request').first().json.senderEmail }}",
+        "sendTo": "={{ $('Extract email request').item.json.senderEmail }}",
         "subject": "Join request received",
-        "message": "={{ 'Thanks, your request was received and created as a triage ticket. Subject: ' + $('Extract email request').first().json.subject }}",
+        "message": "={{ 'Thanks, your request was received and created as a triage ticket. Subject: ' + $('Extract email request').item.json.subject }}",
         "options": {}
       },
       "type": "n8n-nodes-base.gmail",
@@ -238,7 +241,7 @@
     {
       "parameters": {
         "operation": "removeLabels",
-        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "messageId": "={{ $('Extract email request').item.json.messageId }}",
         "labelIds": [
           "INBOX"
         ]
@@ -262,7 +265,7 @@
     {
       "parameters": {
         "operation": "addLabels",
-        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "messageId": "={{ $('Extract email request').item.json.messageId }}",
         "labelIds": [
           "REPLACE_IN_N8N_GMAIL_DONE_LABEL_ID"
         ]
@@ -286,7 +289,7 @@
     {
       "parameters": {
         "operation": "markAsRead",
-        "messageId": "={{ $('Extract email request').first().json.messageId }}"
+        "messageId": "={{ $('Extract email request').item.json.messageId }}"
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
@@ -306,9 +309,9 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $('Extract email request').first().json.senderEmail }}",
+        "sendTo": "={{ $('Extract email request').item.json.senderEmail }}",
         "subject": "Join request needs manual review",
-        "message": "={{ 'Your request could not be processed automatically and was forwarded for manual review. Subject: ' + $('Extract email request').first().json.subject }}",
+        "message": "={{ 'Your request could not be processed automatically and was forwarded for manual review. Subject: ' + $('Extract email request').item.json.subject }}",
         "options": {}
       },
       "type": "n8n-nodes-base.gmail",
@@ -330,7 +333,7 @@
     {
       "parameters": {
         "operation": "addLabels",
-        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "messageId": "={{ $('Extract email request').item.json.messageId }}",
         "labelIds": [
           "REPLACE_IN_N8N_GMAIL_FAILED_LABEL_ID"
         ]
@@ -354,7 +357,7 @@
     {
       "parameters": {
         "operation": "removeLabels",
-        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "messageId": "={{ $('Extract email request').item.json.messageId }}",
         "labelIds": [
           "INBOX"
         ]
@@ -378,7 +381,7 @@
     {
       "parameters": {
         "operation": "addLabels",
-        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "messageId": "={{ $('Extract email request').item.json.messageId }}",
         "labelIds": [
           "REPLACE_IN_N8N_GMAIL_FAILED_LABEL_ID"
         ]
@@ -402,7 +405,7 @@
     {
       "parameters": {
         "operation": "removeLabels",
-        "messageId": "={{ $('Extract email request').first().json.messageId }}",
+        "messageId": "={{ $('Extract email request').item.json.messageId }}",
         "labelIds": [
           "INBOX"
         ]

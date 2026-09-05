@@ -70,6 +70,66 @@ test("strips markdown fences before parsing AI JSON output", () => {
 });
 
 
+test("processes every Gmail poll item independently", () => {
+  const workflow = readWorkflow();
+  const extractNode = workflow.nodes.find((node) => node.name === "Extract email request");
+  const quotaNode = workflow.nodes.find((node) => node.name === "Check daily request limit");
+  const prepareNode = workflow.nodes.find((node) => node.name === "Prepare Firestore task");
+  const linkedNodes = [
+    "Create Firestore ticket",
+    "Send confirmation email",
+    "Label processed email",
+    "Archive processed email",
+    "Mark processed email as read",
+    "Label failed email",
+    "Archive failed email",
+    "Send processing error email",
+    "Label limited email",
+    "Archive limited email",
+  ];
+
+  [extractNode, quotaNode, prepareNode].forEach((node) =>
+    assert.equal(node.parameters.mode, "runOnceForEachItem"),
+  );
+  assert.match(extractNode.parameters.jsCode, /const email = \$json;/);
+  assert.match(prepareNode.parameters.jsCode, /Extract email request"\)\.item\.json/);
+  assert.doesNotMatch(JSON.stringify(workflow), /\.first\(\)\.json/);
+  linkedNodes.forEach((name) => {
+    const parameters = JSON.stringify(
+      workflow.nodes.find((node) => node.name === name).parameters,
+    );
+    assert.match(parameters, /\.item\.json/);
+  });
+});
+
+
+test("rejects malformed or incomplete AI task data", () => {
+  const workflow = readWorkflow();
+  const prepareNode = workflow.nodes.find((node) => node.name === "Prepare Firestore task");
+  const code = prepareNode.parameters.jsCode;
+
+  assert.match(code, /throw new Error\("AI response is not valid JSON\."\)/);
+  assert.match(code, /AI response is missing a title or description/);
+  assert.match(code, /unsupported category or priority/);
+  assert.match(code, /AI response contains an invalid deadline/);
+  assert.doesNotMatch(code, /parsed = \{\};/);
+  assert.equal(prepareNode.onError, "continueErrorOutput");
+});
+
+
+test("anchors relative deadlines and does not invent missing dates", () => {
+  const workflow = readWorkflow();
+  const classifyNode = workflow.nodes.find((node) => node.name === "Classify request with AI");
+  const prepareNode = workflow.nodes.find((node) => node.name === "Prepare Firestore task");
+
+  assert.match(classifyNode.parameters.text, /Today is.*\$now\.toISODate/);
+  assert.match(classifyNode.parameters.text, /explicit or relative deadline/);
+  assert.match(classifyNode.parameters.text, /dueDate as null; never invent a deadline/);
+  assert.match(prepareNode.parameters.jsCode, /function isValidIsoDate/);
+  assert.match(prepareNode.parameters.jsCode, /dueDate \?\? fallbackDate/);
+});
+
+
 test("signs in as Firebase bot before creating Firestore documents", () => {
   const workflow = readWorkflow();
   const signInNode = workflow.nodes.find((node) => node.name === "Sign in n8n bot");
