@@ -46,7 +46,7 @@
     },
     {
       "parameters": {
-        "jsCode": "/**\n   * Reserves one of the ten daily automation slots for one email.\n   * Reserving before the AI call prevents concurrent poll items and failed model\n   * calls from bypassing the cost-protection limit.\n   */\n  const request = $json;\n  const data = $getWorkflowStaticData(\"global\");\n  const today = new Date().toISOString().slice(0, 10);\n  if (data.requestQuotaDate !== today) {\n    data.requestQuotaDate = today;\n    data.requestQuotaUsed = 0;\n  }\n  const used = Number(data.requestQuotaUsed ?? 0);\n  const dailyLimit = 10;\n  const limitReached = used >= dailyLimit;\n  if (!limitReached) data.requestQuotaUsed = used + 1;\n\n  return {\n    json: {\n      ...request,\n      quota: {\n        date: today,\n        used: limitReached ? used : used + 1,\n        dailyLimit,\n        limitReached,\n      },\n    },\n  };\n",
+        "jsCode": "/**\n * Reserves one of the ten daily automation slots for one email.\n * The counter follows the Europe/Berlin calendar day used by the public UI.\n */\nconst request = $json;\nconst data = $getWorkflowStaticData(\"global\");\nconst today = getBerlinDateKey(new Date());\nif (data.requestQuotaDate !== today) {\n  data.requestQuotaDate = today;\n  data.requestQuotaUsed = 0;\n}\nconst used = Number(data.requestQuotaUsed ?? 0);\nconst dailyLimit = 10;\nconst limitReached = used >= dailyLimit;\nif (!limitReached) data.requestQuotaUsed = used + 1;\n\nreturn {\n  json: {\n    ...request,\n    quota: {\n      date: today,\n      used: limitReached ? used : used + 1,\n      dailyLimit,\n      limitReached,\n    },\n  },\n};\n\n/**\n * Formats an instant as YYYY-MM-DD in the Europe/Berlin time zone.\n * @param {Date} date - Instant to format.\n * @returns {string} Berlin-local date key.\n */\nfunction getBerlinDateKey(date) {\n  const parts = new Intl.DateTimeFormat(\"en-GB\", {\n    timeZone: \"Europe/Berlin\",\n    year: \"numeric\",\n    month: \"2-digit\",\n    day: \"2-digit\",\n  }).formatToParts(date);\n  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));\n  return `${values.year}-${values.month}-${values.day}`;\n}\n",
         "mode": "runOnceForEachItem"
       },
       "type": "n8n-nodes-base.code",
@@ -95,12 +95,12 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "={{ 'Classify this Join issue email. Today is ' + $now.toISODate() + '. Return exactly one valid JSON object without Markdown or additional text. Required keys: title, category, priority, dueDate, description. title must be concise and non-empty. category must be user-story or technical-task. priority must be low, medium or urgent. If the email contains an explicit or relative deadline, resolve it against today and return dueDate as YYYY-MM-DD. Otherwise return dueDate as null; never invent a deadline. description must be concise and non-empty. Sender: ' + $json.senderName + ' <' + $json.senderEmail + '> Subject: ' + $json.subject + ' Body: ' + $json.body }}"
+        "text": "={{ 'Classify this Join issue email. Today is ' + $now.toISODate() + '. Return exactly one valid JSON object without Markdown or additional text. Required keys: title, category, priority, dueDate, description. title must be concise and non-empty. category must be user-story or technical-task. priority must be low, medium or urgent. If the email contains an explicit or relative deadline, resolve it against today and return dueDate as YYYY-MM-DD. Otherwise return dueDate as null; never invent a deadline. description must be concise and non-empty. Sender: ' + $('Extract email request').item.json.senderName + ' <' + $('Extract email request').item.json.senderEmail + '> Subject: ' + $('Extract email request').item.json.subject + ' Body: ' + $('Extract email request').item.json.body }}"
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.6,
       "position": [
-        -176,
+        272,
         560
       ],
       "id": "ae13d86b-6771-489a-ad5e-4a9848fa7f0d",
@@ -115,7 +115,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        176,
+        624,
         496
       ],
       "id": "cece9b05-c349-4f5a-828d-8c9727fc0a16",
@@ -143,7 +143,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        624,
+        848,
         352
       ],
       "id": "9fd73985-7e74-479c-9a1b-2812cc079f33",
@@ -160,7 +160,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        848,
+        1072,
         272
       ],
       "id": "ae3c5d91-bfdf-4d57-9535-97887c90cd25",
@@ -209,11 +209,39 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        400,
-        416
+        -176,
+        560
       ],
       "id": "23bb97f7-9044-4544-a606-7684d8c353d6",
       "name": "Sign in n8n bot",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://firestore.googleapis.com/v1/projects/join-issue-collector-b5f54/databases/(default)/documents:commit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Sign in n8n bot').item.json.idToken }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ writes: [{ update: { name: 'projects/join-issue-collector-b5f54/databases/(default)/documents/automationQuota/' + $('Check daily request limit').item.json.quota.date, fields: { date: { stringValue: $('Check daily request limit').item.json.quota.date }, dailyLimit: { integerValue: String($('Check daily request limit').item.json.quota.dailyLimit) }, updatedAt: { timestampValue: new Date().toISOString() } } }, updateMask: { fieldPaths: ['date', 'dailyLimit', 'updatedAt'] }, updateTransforms: [{ fieldPath: 'used', increment: { integerValue: '1' } }] }] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        48,
+        560
+      ],
+      "id": "b38e144e-3541-4ea4-bb68-6c099341d399",
+      "name": "Reserve daily quota slot",
       "onError": "continueErrorOutput"
     },
     {
@@ -226,7 +254,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmOllama",
       "typeVersion": 1,
       "position": [
-        -104,
+        344,
         792
       ],
       "id": "61aef5e6-7381-43ec-8052-1c645a37b990",
@@ -249,7 +277,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1296,
+        1520,
         224
       ],
       "id": "606ef55c-d43c-4b60-9f3e-4177d154ef0d",
@@ -273,7 +301,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1072,
+        1296,
         224
       ],
       "id": "489a825e-2dbc-401c-8400-e65158b43e24",
@@ -294,7 +322,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1520,
+        1744,
         224
       ],
       "id": "6346a260-c866-46d5-a694-18ae1a9c68a3",
@@ -317,7 +345,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1520,
+        1744,
         640
       ],
       "id": "c13f2269-f2c8-41f0-8e57-084448d99076",
@@ -341,7 +369,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1072,
+        1296,
         640
       ],
       "id": "edc56463-61d4-4722-b088-5925443695af",
@@ -365,7 +393,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1296,
+        1520,
         640
       ],
       "id": "ca981906-b205-4071-9b48-5bb5a14a9e8d",
@@ -466,7 +494,7 @@
       "main": [
         [
           {
-            "node": "Classify request with AI",
+            "node": "Sign in n8n bot",
             "type": "main",
             "index": 0
           }
@@ -502,7 +530,7 @@
       "main": [
         [
           {
-            "node": "Sign in n8n bot",
+            "node": "Create Firestore ticket",
             "type": "main",
             "index": 0
           }
@@ -538,7 +566,7 @@
       "main": [
         [
           {
-            "node": "Create Firestore ticket",
+            "node": "Reserve daily quota slot",
             "type": "main",
             "index": 0
           }
@@ -641,6 +669,24 @@
         [
           {
             "node": "Archive limited email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reserve daily quota slot": {
+      "main": [
+        [
+          {
+            "node": "Classify request with AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send limit email",
             "type": "main",
             "index": 0
           }

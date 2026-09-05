@@ -29,6 +29,7 @@ test("stores an importable n8n email collector workflow", () => {
   assert.equal(workflow.name, "Email to Triage Ticket");
   assert.ok(nodeNames.includes("Watch stakeholder inbox"));
   assert.ok(nodeNames.includes("Check daily request limit"));
+  assert.ok(nodeNames.includes("Reserve daily quota slot"));
   assert.ok(nodeNames.includes("Classify request with AI"));
   assert.ok(nodeNames.includes("Sign in n8n bot"));
   assert.ok(nodeNames.includes("Create Firestore ticket"));
@@ -133,22 +134,57 @@ test("anchors relative deadlines and does not invent missing dates", () => {
 test("signs in as Firebase bot before creating Firestore documents", () => {
   const workflow = readWorkflow();
   const signInNode = workflow.nodes.find((node) => node.name === "Sign in n8n bot");
+  const quotaReservationNode = workflow.nodes.find((node) => node.name === "Reserve daily quota slot");
   const createNode = workflow.nodes.find((node) => node.name === "Create Firestore ticket");
-  const prepareConnections = workflow.connections["Prepare Firestore task"].main[0];
+  const allowedConnections = workflow.connections["Is automation allowed?"].main[0];
   const signInConnections = workflow.connections["Sign in n8n bot"].main[0];
+  const reservationConnections = workflow.connections["Reserve daily quota slot"].main[0];
+  const prepareConnections = workflow.connections["Prepare Firestore task"].main[0];
 
   assert.match(signInNode.parameters.url, /accounts:signInWithPassword/);
   assert.match(signInNode.parameters.url, /REPLACE_IN_N8N_FIREBASE_WEB_API_KEY/);
   assert.match(signInNode.parameters.jsonBody, /n8n-bot@join\.local/);
   assert.match(signInNode.parameters.jsonBody, /REPLACE_IN_N8N_FIREBASE_BOT_PASSWORD/);
-  assert.deepEqual(prepareConnections, [{ node: "Sign in n8n bot", type: "main", index: 0 }]);
-  assert.deepEqual(signInConnections, [{ node: "Create Firestore ticket", type: "main", index: 0 }]);
+  assert.deepEqual(allowedConnections, [{ node: "Sign in n8n bot", type: "main", index: 0 }]);
+  assert.deepEqual(signInConnections, [{ node: "Reserve daily quota slot", type: "main", index: 0 }]);
+  assert.deepEqual(reservationConnections, [{ node: "Classify request with AI", type: "main", index: 0 }]);
+  assert.deepEqual(prepareConnections, [{ node: "Create Firestore ticket", type: "main", index: 0 }]);
 
   assert.equal(createNode.parameters.authentication, undefined);
   assert.equal(createNode.parameters.genericAuthType, undefined);
   assert.equal(createNode.credentials, undefined);
   assert.equal(createNode.parameters.sendHeaders, true);
   assert.match(createNode.parameters.headerParameters.parameters[0].value, /idToken/);
+  assert.match(quotaReservationNode.parameters.headerParameters.parameters[0].value, /idToken/);
+});
+
+
+test("publishes the Berlin-local daily quota for the stakeholder page", () => {
+  const workflow = readWorkflow();
+  const quotaNode = workflow.nodes.find((node) => node.name === "Check daily request limit");
+  const reservationNode = workflow.nodes.find((node) => node.name === "Reserve daily quota slot");
+
+  assert.match(quotaNode.parameters.jsCode, /timeZone: "Europe\/Berlin"/);
+  assert.match(quotaNode.parameters.jsCode, /function getBerlinDateKey/);
+  assert.equal(reservationNode.parameters.method, "POST");
+  assert.match(reservationNode.parameters.url, /documents:commit/);
+  assert.match(reservationNode.parameters.jsonBody, /automationQuota/);
+  assert.match(reservationNode.parameters.jsonBody, /updateTransforms/);
+  assert.match(reservationNode.parameters.jsonBody, /increment/);
+  assert.equal(reservationNode.onError, "continueErrorOutput");
+  assert.deepEqual(workflow.connections["Reserve daily quota slot"].main[1], [
+    { node: "Send limit email", type: "main", index: 0 },
+  ]);
+});
+
+
+test("keeps the extracted email linked after reserving a quota slot", () => {
+  const workflow = readWorkflow();
+  const classifyNode = workflow.nodes.find((node) => node.name === "Classify request with AI");
+
+  assert.match(classifyNode.parameters.text, /Extract email request.*item\.json\.senderName/);
+  assert.match(classifyNode.parameters.text, /Extract email request.*item\.json\.body/);
+  assert.doesNotMatch(classifyNode.parameters.text, /\$json\.senderName/);
 });
 
 

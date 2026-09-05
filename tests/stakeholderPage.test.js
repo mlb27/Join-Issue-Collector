@@ -63,7 +63,12 @@ test("uses the normal stakeholder view by default", () => {
 
   assert.deepEqual(
     JSON.parse(JSON.stringify(getStakeholderPageState(""))),
-    { limitReached: false, requestCount: 0, view: "default" },
+    {
+      demoOverride: false,
+      limitReached: false,
+      requestCount: 0,
+      view: "default",
+    },
   );
 });
 
@@ -74,11 +79,49 @@ test("exposes the daily-limit design through the demo query", () => {
 
   assert.deepEqual(
     JSON.parse(JSON.stringify(getStakeholderPageState("?limit=reached"))),
-    { limitReached: true, requestCount: 10, view: "limit" },
+    {
+      demoOverride: true,
+      limitReached: true,
+      requestCount: 10,
+      view: "limit",
+    },
   );
   assert.match(page, /data-stakeholder-view="limit"/);
   assert.match(page, /The daily 10-request limit has been reached!/);
   assert.equal((page.match(/>\s*Create request\s*</g) || []).length, 2);
+});
+
+
+test("loads and clamps the persisted Firestore quota", async () => {
+  const { loadStakeholderQuota, createStakeholderPageState } = loadStakeholderScript();
+  const fetchQuota = async () => ({
+    ok: true,
+    async json() {
+      return { fields: { used: { integerValue: "12" } } };
+    },
+  });
+
+  assert.equal(await loadStakeholderQuota(fetchQuota), 12);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(createStakeholderPageState(12))),
+    {
+      demoOverride: false,
+      limitReached: true,
+      requestCount: 10,
+      view: "limit",
+    },
+  );
+});
+
+
+test("uses the Europe/Berlin calendar day for quota documents", () => {
+  const { getBerlinDateKey, getStakeholderQuotaUrl } = loadStakeholderScript();
+  const beforeBerlinMidnight = new Date("2026-09-04T21:59:59.000Z");
+  const afterBerlinMidnight = new Date("2026-09-04T22:00:00.000Z");
+
+  assert.equal(getBerlinDateKey(beforeBerlinMidnight), "2026-09-04");
+  assert.equal(getBerlinDateKey(afterBerlinMidnight), "2026-09-05");
+  assert.match(getStakeholderQuotaUrl(afterBerlinMidnight), /automationQuota\/2026-09-05$/);
 });
 
 

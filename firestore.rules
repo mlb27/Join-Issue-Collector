@@ -46,6 +46,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isN8nBot() {
+      return isAuthenticated() &&
+        request.auth.token.email == 'n8n-bot@join.local';
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -113,7 +118,18 @@ service cloud.firestore {
     function isEmailTaskFromN8nBot(data) {
       return data.source == 'email' &&
         data.creator.type == 'external' &&
-        request.auth.token.email == 'n8n-bot@join.local';
+        isN8nBot();
+    }
+
+    function isValidAutomationQuota(quotaId, data) {
+      return data.keys().hasOnly(['date', 'used', 'dailyLimit', 'updatedAt']) &&
+        data.keys().hasAll(['date', 'used', 'dailyLimit', 'updatedAt']) &&
+        data.date == quotaId &&
+        data.used is int &&
+        data.used >= 0 &&
+        data.used <= 10 &&
+        data.dailyLimit == 10 &&
+        data.updatedAt is timestamp;
     }
 
     function taskOriginUnchanged() {
@@ -182,6 +198,19 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isOwner(userId) && isValidUser(request.resource.data) && createdAtUnchanged();
+      allow delete: if false;
+    }
+
+    match /automationQuota/{quotaId} {
+      allow read: if true;
+      allow create: if isN8nBot() &&
+        isValidAutomationQuota(quotaId, request.resource.data) &&
+        request.resource.data.used == 1;
+      allow update: if isN8nBot() &&
+        isValidAutomationQuota(quotaId, request.resource.data) &&
+        request.resource.data.used == resource.data.used + 1 &&
+        request.resource.data.date == resource.data.date &&
+        request.resource.data.dailyLimit == resource.data.dailyLimit;
       allow delete: if false;
     }
 
