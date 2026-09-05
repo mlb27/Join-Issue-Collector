@@ -1,0 +1,226 @@
+{
+  "name": "Task Status Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "join-task-status",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        240
+      ],
+      "id": "bb4bcb2e-8c9c-42b8-bb58-5418cdf36541",
+      "name": "Receive status change",
+      "webhookId": "8c3c9c69-25d0-4cdc-b907-3b0301a9a38e"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Validates and normalizes a status-change request from the Join frontend.\n * The browser deliberately sends no recipient address; later nodes load the\n * trusted creator metadata from Firestore.\n */\nconst input = $input.first().json;\nlet request = input.body ?? input;\nif (typeof request === \"string\") request = JSON.parse(request);\n\nconst statuses = new Set([\"triage\", \"todo\", \"in-progress\", \"feedback\", \"done\"]);\nconst taskId = String(request.taskId || \"\").trim();\nconst previousStatus = String(request.previousStatus || \"\").trim();\nconst nextStatus = String(request.nextStatus || \"\").trim();\n\nif (!/^[A-Za-z0-9_-]{1,128}$/.test(taskId)) throw new Error(\"Invalid task id.\");\nif (!statuses.has(previousStatus) || !statuses.has(nextStatus)) {\n  throw new Error(\"Invalid board status.\");\n}\nif (previousStatus === nextStatus) throw new Error(\"The board status did not change.\");\n\nreturn [{ json: { taskId, previousStatus, nextStatus } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        240
+      ],
+      "id": "b22bf47f-d90e-4b44-ae7b-7299137da7f4",
+      "name": "Validate status change"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=REPLACE_IN_N8N_FIREBASE_WEB_API_KEY",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { email: 'n8n-bot@join.local', password: 'REPLACE_IN_N8N_FIREBASE_BOT_PASSWORD', returnSecureToken: true } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -160,
+        240
+      ],
+      "id": "9def5c98-caca-4f39-a40a-0400f5835639",
+      "name": "Sign in n8n bot",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://firestore.googleapis.com/v1/projects/join-issue-collector-b5f54/databases/(default)/documents/tasks/' + encodeURIComponent($('Validate status change').first().json.taskId) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Sign in n8n bot').first().json.idToken }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        80,
+        240
+      ],
+      "id": "9f5d135c-acde-4af9-a974-c3572b67124c",
+      "name": "Load Firestore task"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Builds a creator email from trusted Firestore fields.\n * A stale or incomplete request is skipped instead of mailing an address\n * supplied by the public webhook caller.\n */\nconst fields = $input.first().json.fields ?? {};\nconst request = $(\"Validate status change\").first().json;\nconst creatorFields = fields.creator?.mapValue?.fields ?? {};\nconst creatorType = readString(creatorFields.type);\nconst recipient = readString(creatorFields.email).trim();\nconst creatorName = readString(creatorFields.name).trim() || \"there\";\nconst title = readString(fields.title).trim() || \"Untitled ticket\";\nconst storedStatus = readString(fields.status);\nconst statusLabels = {\n  triage: \"Triage\",\n  todo: \"To do\",\n  \"in-progress\": \"In progress\",\n  feedback: \"Await feedback\",\n  done: \"Done\",\n};\nconst shouldNotify =\n  [\"internal\", \"external\"].includes(creatorType) &&\n  /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient) &&\n  storedStatus === request.nextStatus;\n\nreturn [{\n  json: {\n    shouldNotify,\n    recipient,\n    subject: \"Join ticket moved to \" + statusLabels[request.nextStatus],\n    message:\n      \"Hello \" + escapeHtml(creatorName) + \",<br><br>\" +\n      \"your ticket <strong>\" + escapeHtml(title) + \"</strong> moved from \" +\n      escapeHtml(statusLabels[request.previousStatus]) + \" to <strong>\" +\n      escapeHtml(statusLabels[request.nextStatus]) + \"</strong>.<br><br>\" +\n      \"Kind regards,<br>The Join team\",\n  },\n}];\n\n/**\n * Reads a string field from a Firestore REST document.\n * @param {Object} field - Firestore value wrapper.\n * @returns {string} Stored string or an empty fallback.\n */\nfunction readString(field) {\n  return typeof field?.stringValue === \"string\" ? field.stringValue : \"\";\n}\n\n/**\n * Escapes dynamic task data before inserting it into an HTML email.\n * @param {string} value - Untrusted stored display text.\n * @returns {string} HTML-safe text.\n */\nfunction escapeHtml(value) {\n  return String(value)\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        240
+      ],
+      "id": "3f909ce1-b476-4a62-b845-1f6b99922dd2",
+      "name": "Prepare creator email"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "27a113b2-601a-48e8-8a76-8ce16d50bcfa",
+              "leftValue": "={{ $json.shouldNotify }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        240
+      ],
+      "id": "bdeab65a-0b77-4438-9357-d49bb49ba90f",
+      "name": "Has creator email?"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.recipient }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        800,
+        176
+      ],
+      "id": "88d7d3f5-b987-4d21-9718-7586df66dfe5",
+      "name": "Send status email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_IN_N8N",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive status change": {
+      "main": [
+        [
+          {
+            "node": "Validate status change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate status change": {
+      "main": [
+        [
+          {
+            "node": "Sign in n8n bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign in n8n bot": {
+      "main": [
+        [
+          {
+            "node": "Load Firestore task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Firestore task": {
+      "main": [
+        [
+          {
+            "node": "Prepare creator email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare creator email": {
+      "main": [
+        [
+          {
+            "node": "Has creator email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has creator email?": {
+      "main": [
+        [
+          {
+            "node": "Send status email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7de3aad6-346d-44bc-a786-bddc03427cbd",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "REPLACE_AFTER_IMPORT",
+  "tags": []
+}

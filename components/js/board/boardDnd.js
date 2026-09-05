@@ -209,6 +209,7 @@ function clearActiveBoardDragCard() {
  */
 async function moveBoardTaskToStatus(task, status) {
   const previousStatus = task.status;
+  if (previousStatus === status) return;
   task.status = status;
   renderBoardFromLocalTasks();
   try {
@@ -217,6 +218,23 @@ async function moveBoardTaskToStatus(task, status) {
     task.status = previousStatus;
     renderBoardFromLocalTasks();
     throw error;
+  }
+  await notifyTaskCreatorAfterBoardMove(task, previousStatus, status);
+}
+
+
+/**
+ * Keeps a failed notification from rolling back an already persisted move.
+ * @param {Object} task - Persisted task that was moved.
+ * @param {string} previousStatus - Status before the move.
+ * @param {string} nextStatus - Persisted destination status.
+ */
+async function notifyTaskCreatorAfterBoardMove(task, previousStatus, nextStatus) {
+  if (typeof notifyTaskCreatorOfStatusChange !== "function") return;
+  try {
+    await notifyTaskCreatorOfStatusChange(task, previousStatus, nextStatus);
+  } catch (error) {
+    console.warn("Task creator notification could not be requested.", error);
   }
 }
 

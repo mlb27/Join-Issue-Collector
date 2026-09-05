@@ -236,10 +236,11 @@ not mean that credentials should be added to the repository.
 
 ## n8n Setup
 
-The repository contains an importable n8n workflow for the stakeholder email collector:
+The repository contains two importable n8n workflows:
 
 ```text
 n8n/workflows/email-to-triage-ticket.json
+n8n/workflows/task-status-notification.json
 ```
 
 The workflow is inactive by default and contains no secrets. Import it through
@@ -270,6 +271,24 @@ message as read. Failures in AI classification, payload preparation, Firebase bo
 Credential IDs, the Firebase Web API key, the Firebase bot password and Gmail
 label IDs are placeholders in the committed JSON. Configure them only inside
 n8n and sanitize every later workflow export before committing it.
+
+### Status-change notifications
+
+Import `task-status-notification.json`, connect `Send status email` to the
+stakeholder Gmail credential and replace the Firebase Web API key and bot
+password placeholders inside `Sign in n8n bot`. Activate the workflow and copy
+its production webhook URL.
+
+Add that URL only to the ignored local Firebase configuration file:
+
+```js
+window.joinN8nStatusWebhookUrl = "PASTE_N8N_PRODUCTION_WEBHOOK_URL";
+```
+
+The board requests this webhook only after a task move was saved. The browser
+sends the task id and old/new status, while n8n loads the trusted creator email
+from Firestore. Internal and external creators with an email address receive a
+notification; guests and legacy tasks without an address are skipped.
 
 ## Usage
 

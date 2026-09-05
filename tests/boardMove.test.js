@@ -141,3 +141,39 @@ test("renders a moved task immediately and persists its new status", async () =>
   assert.equal(state.renders, 1);
   assert.equal(state.savedStatus, "done");
 });
+
+
+test("notifies the creator only after the moved task was persisted", async () => {
+  const task = { id: "task-1", status: "triage" };
+  const state = { events: [] };
+  const context = loadBrowserScripts(["components/js/board/boardDnd.js"], {
+    activeBoardTasks: [task],
+    renderBoardColumns() {},
+    initBoardTaskDetails() {},
+    updateTaskInStore: async () => { state.events.push("saved"); },
+    notifyTaskCreatorOfStatusChange: async (_task, previous, next) => {
+      state.events.push(previous + ":" + next);
+    },
+  });
+
+  await context.moveBoardTaskToStatus(task, "todo");
+
+  assert.deepEqual(state.events, ["saved", "triage:todo"]);
+});
+
+
+test("keeps a persisted move when the creator notification fails", async () => {
+  const task = { id: "task-1", status: "todo" };
+  const context = loadBrowserScripts(["components/js/board/boardDnd.js"], {
+    activeBoardTasks: [task],
+    renderBoardColumns() {},
+    initBoardTaskDetails() {},
+    updateTaskInStore: async () => {},
+    notifyTaskCreatorOfStatusChange: async () => { throw new Error("offline"); },
+    console: { warn() {} },
+  });
+
+  await context.moveBoardTaskToStatus(task, "done");
+
+  assert.equal(task.status, "done");
+});
