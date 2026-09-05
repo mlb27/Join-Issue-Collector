@@ -1,5 +1,20 @@
 components/js/firebase/firebaseConfig.js
 components/js/firebaseConfig.js
+
+# Local environment and Firebase runtime files
+.env
+.env.*
+!.env.example
+.firebase/
+firebase-debug.log*
+
+# Credentials must stay outside the repository
+*service-account*.json
+*serviceAccount*.json
+n8n/credentials/
+n8n/.env*
+
+# Local working notes
 firebase-rules-analysis.md
 todo.md
 notes.md

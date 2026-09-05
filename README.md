@@ -48,11 +48,13 @@ No public deployment URL is configured for this fork yet.
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Application Architecture](#application-architecture)
+- [Architecture and Data Model](#architecture-and-data-model)
 - [Requirements](#requirements)
 - [Quickstart](#quickstart)
 - [Firebase Setup](#firebase-setup)
 - [n8n Setup](#n8n-setup)
 - [Usage](#usage)
+- [Demo and Acceptance Test](#demo-and-acceptance-test)
 - [Project Structure](#project-structure)
 - [Automated Tests](#automated-tests)
 - [Deployment](#deployment)
@@ -67,6 +69,9 @@ No public deployment URL is configured for this fork yet.
 | Summary           | View live task totals, status metrics, urgent tasks and the next upcoming deadline.           |
 | Add Task          | Create tasks with a title, description, due date, priority, category, assignees and subtasks. |
 | Stakeholder entry | Explain external issue creation through a public stakeholder page.                            |
+| Email collector   | Turn stakeholder emails into AI-classified tickets in Triage.                                 |
+| Cost protection   | Limit automated email tickets to ten per Europe/Berlin calendar day.                          |
+| Notifications     | Confirm created tickets and notify creators after board status changes.                       |
 | Board             | Organize tasks across Triage, To do, In progress, Await feedback and Done.                    |
 | Task editing      | Edit, move and delete existing tasks directly from the board.                                 |
 | Subtasks          | Add, edit, remove and complete individual subtasks.                                           |
@@ -85,7 +90,7 @@ No public deployment URL is configured for this fork yet.
 | JavaScript ES6+         | Routing, rendering, validation and application logic           |
 | Firebase Authentication | Email/password and anonymous guest authentication              |
 | Cloud Firestore         | Shared task and contact persistence                            |
-| Firebase Hosting        | Public deployment of the application                           |
+| Static web server       | Local development and optional public deployment                |
 | n8n                     | Email intake, AI classification and notification workflow       |
 | Node.js test runner     | Automated tests for central application logic                  |
 
@@ -106,14 +111,21 @@ Visible markup is organized according to Atomic Design:
 The JavaScript layer separates rendering, validation, stores, Firebase adapters
 and feature-specific interactions into focused files.
 
+## Architecture and Data Model
+
+The complete system flow, trust boundaries, Firestore collections and failure
+paths are documented in
+[`docs/architecture.md`](./docs/architecture.md).
+
 ## Requirements
 
 - A modern web browser
 - A local development server, such as the VS Code Live Server extension
 - Node.js when running the automated tests or Firebase CLI commands
 - An internet connection for Firebase Authentication and Firestore
-- Access to the `join-issue-collector-b5f54` Firebase project for local Firebase setup
+- A Firebase project with Authentication and Cloud Firestore
 - A local or hosted n8n instance for the email collector workflow
+- A chat model reachable from n8n for issue classification
 
 When a hosted demo is available, it can be opened without a local installation.
 
@@ -204,9 +216,11 @@ Select-String -Path .\components\js\firebase\firebaseConfig.js -Pattern "project
 git check-ignore -v .\components\js\firebase\firebaseConfig.js
 ```
 
-The configuration must reference the Firebase project
-`join-issue-collector-b5f54`. If the project does not appear in
-`projects:list`, ask a Firebase project owner to add your Google account.
+The checked-in workflow exports target the reference project
+`join-issue-collector-b5f54`. When using another Firebase project, update the
+project ID in `.firebaserc`, both workflow URLs and the local web
+configuration. If the reference project does not appear in `projects:list`,
+ask a Firebase project owner to add your Google account.
 
 Without the local configuration file, email/password login, guest login,
 Firestore tasks and Firestore contacts are unavailable.
@@ -214,6 +228,27 @@ Firestore tasks and Firestore contacts are unavailable.
 > [!IMPORTANT]
 > Never commit passwords, private credentials, service-account files, API
 > secrets or admin keys to this repository.
+
+### Configure Firebase services
+
+1. Enable **Email/Password** and **Anonymous** under
+   `Authentication` -> `Sign-in method`.
+2. Create the Cloud Firestore database in production mode.
+3. Deploy the checked-in rules and indexes:
+
+   ```powershell
+   npx -y firebase-tools@latest deploy --only firestore --project join-issue-collector-b5f54
+   ```
+
+4. Create a dedicated Email/Password Authentication user for n8n. The workflow
+   expects the address `n8n-bot@join.local`; its password belongs only in n8n.
+
+The `tasks` and `contacts` collections are created when the application
+writes their first documents. The email workflow creates one
+`automationQuota/YYYY-MM-DD` document per Europe/Berlin calendar day.
+Authenticated team members may manage board data. Only the dedicated n8n user
+may create email tickets or increment the quota. The public stakeholder page
+can read only the quota documents needed to display the daily usage.
 
 ### Troubleshooting: Unauthorized OAuth domain
 
@@ -243,8 +278,10 @@ n8n/workflows/email-to-triage-ticket.json
 n8n/workflows/task-status-notification.json
 ```
 
-The workflow is inactive by default and contains no secrets. Import it through
-**Import from File** in a local or hosted n8n instance. Before activating it:
+The exports are inactive and sanitized. Import them through **Import from
+File** in a local or hosted n8n instance. Importing a new export creates a
+separate workflow; it does not update an existing live workflow automatically.
+Before publishing the email workflow:
 
 1. Connect the Gmail nodes to the dedicated stakeholder inbox credential.
 2. Connect `Ollama Model` to an Ollama credential or replace it with a compatible
@@ -252,9 +289,25 @@ The workflow is inactive by default and contains no secrets. Import it through
 3. Create the dedicated Firebase Authentication user `n8n-bot@join.local`.
 4. In `Sign in n8n bot`, replace the Firebase Web API key and bot-password
    placeholders only inside n8n.
-5. Publish the repository's `firestore.rules` in the Firebase project.
+5. Publish the repository's `firestore.rules` in the Firebase project before
+   testing `Reserve daily quota slot`.
 6. Create the Gmail labels `erledigt` and `zu bearbeiten`, then select the
-   `erledigt` label again in `Label processed email`.
+   matching labels in `Label processed email`, `Label failed email` and
+   `Label limited email`.
+
+Keep all three Code nodes in `Run Once for Each Item` mode:
+
+- `Extract email request`
+- `Check daily request limit`
+- `Prepare Firestore task`
+
+The central success path must be connected in this order:
+
+```text
+Watch inbox -> Extract email -> Check limit -> Sign in n8n bot
+-> Reserve quota slot -> Classify with AI -> Prepare task
+-> Create Firestore ticket -> Confirm -> Label -> Archive -> Mark as read
+```
 
 The current stakeholder inbox is:
 
@@ -262,21 +315,28 @@ The current stakeholder inbox is:
 join.issue.collector.mail@gmail.com
 ```
 
-The workflow watches unread stakeholder emails, extracts sender, subject and
-body, enforces the public 10-request daily automation limit, classifies the
-request with AI and creates a Firestore ticket in `Triage`. Every Gmail item is
-processed independently when one poll returns several messages. Daily slots are
-reserved before the AI call so failed attempts cannot bypass the cost-protection
-limit. On success the workflow sends a confirmation, adds the `erledigt` label,
+The workflow polls unread stakeholder emails once per minute, extracts sender,
+subject and body, enforces the 10-request limit, classifies the request with AI
+and creates a Firestore ticket in `Triage`. Every Gmail item is processed
+independently when one poll returns several messages. A local workflow-state
+guard rejects an already exhausted day before authentication or an AI call.
+Accepted requests then increment the shared Firestore quota atomically before
+classification. The Firestore value drives the public landing-page counter.
+
+On success the workflow sends a confirmation, adds the `erledigt` label,
 removes `INBOX` and marks the original message as read. Malformed or incomplete
-AI output, invalid deadlines and technical failures are labeled `zu bearbeiten`,
-removed from `INBOX`, kept unread and followed by an error notification. The
-limit branch sends a separate notification and moves the unread request to
-`zu bearbeiten` without creating a ticket.
+AI output, invalid deadlines and technical failures are labeled
+`zu bearbeiten`, removed from `INBOX`, kept unread and followed by an error
+notification. The limit branch sends a separate notification and moves the
+unread request to `zu bearbeiten` without creating a ticket.
 
 Credential IDs, the Firebase Web API key, the Firebase bot password and Gmail
 label IDs are placeholders in the committed JSON. Configure them only inside
 n8n and sanitize every later workflow export before committing it.
+
+Test the imported draft manually before publishing it. The orange
+`Execute workflow` button tests the draft; automatic polling and production
+webhooks run only after the workflow is published and active.
 
 ### Status-change notifications
 
@@ -299,6 +359,8 @@ notification; guests and legacy tasks without an address are skipped.
 ## Usage
 
 - Create an account or use the guest login.
+- Choose the stakeholder route to open an email addressed to the dedicated
+  issue inbox and view the current daily automation usage.
 - Review task totals and the next deadline on the Summary page.
 - Create a task through Add Task or from a Board column.
 - Assign contacts, choose a priority and add subtasks.
@@ -308,6 +370,14 @@ notification; guests and legacy tasks without an address are skipped.
 - Manage contacts from the Contacts page.
 
 Guest and authenticated users work with the same shared Firestore data set.
+
+## Demo and Acceptance Test
+
+The complete manual test sequence is documented in
+[`docs/demo-and-acceptance.md`](./docs/demo-and-acceptance.md). It covers the
+stakeholder journey, automated and manual Triage tickets, successful and failed
+email handling, the daily limit, creator notifications and responsive checks
+down to 320 px.
 
 ## Project Structure
 
@@ -327,11 +397,15 @@ Guest and authenticated users work with the same shared Firestore data set.
 |   |   |-- pages/
 |   |   `-- templates/
 |   `-- js/
-|       |-- firebaseAuth.mjs
-|       |-- firebaseContacts.mjs
-|       |-- firebaseTasks.mjs
+|       |-- firebase/
+|       |   |-- firebaseAuth.mjs
+|       |   |-- firebaseContacts.mjs
+|       |   `-- firebaseTasks.mjs
 |       `-- feature and store modules
 |-- tests/
+|-- docs/
+|   |-- architecture.md
+|   `-- demo-and-acceptance.md
 |-- n8n/
 |   `-- workflows/
 |-- addTask.html
@@ -360,6 +434,9 @@ The repository contains automated tests for important logic paths, including:
 - privacy-policy consent
 - legal-page language defaults, persistence and synchronization
 - asynchronous error handling
+- n8n workflow topology, per-item modes and sanitized credentials
+- Firestore quota permissions and atomic increments
+- repository checks that prevent common credential files and secrets
 
 Run the complete test suite from the project root:
 
@@ -369,11 +446,14 @@ node --test
 
 ## Deployment
 
-The application is prepared for Firebase Hosting. A public deployment URL has
-not been configured for this fork yet.
+The repository currently contains Firestore configuration but no Firebase
+Hosting target. The static frontend can be served by Firebase Hosting or
+another HTTPS-capable static host after its deployment configuration is added.
 
-Before a deployment, verify the working tree, run the automated tests and test
-the main user stories on desktop and mobile resolutions.
+Before deployment, configure the production domain in Firebase Authentication,
+set the production status-webhook URL only in the deployment's untracked
+`firebaseConfig.js`, publish both n8n workflows, run the automated tests and
+complete the manual acceptance test on desktop and mobile.
 
 ## Learning Goals
 
