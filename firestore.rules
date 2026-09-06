@@ -205,7 +205,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isN8nBot() &&
         isValidAutomationQuota(quotaId, request.resource.data) &&
-        request.resource.data.used == 1;
+        request.resource.data.used >= 1;
       allow update: if isN8nBot() &&
         isValidAutomationQuota(quotaId, request.resource.data) &&
         request.resource.data.used == resource.data.used + 1 &&

@@ -45,6 +45,7 @@ test("uses current Gmail send fields for notification nodes", () => {
 
   assert.match(confirmationNode.parameters.sendTo, /senderEmail/);
   assert.match(limitNode.parameters.sendTo, /senderEmail/);
+  assert.match(limitNode.parameters.sendTo, /Extract email request/);
   assert.equal(confirmationNode.parameters.to, undefined);
   assert.equal(limitNode.parameters.to, undefined);
 });
@@ -166,14 +167,14 @@ test("publishes the Berlin-local daily quota for the stakeholder page", () => {
 
   assert.match(quotaNode.parameters.jsCode, /timeZone: "Europe\/Berlin"/);
   assert.match(quotaNode.parameters.jsCode, /function getBerlinDateKey/);
-  assert.equal(reservationNode.parameters.method, "POST");
-  assert.match(reservationNode.parameters.url, /documents:commit/);
-  assert.match(reservationNode.parameters.jsonBody, /automationQuota/);
-  assert.match(reservationNode.parameters.jsonBody, /updateTransforms/);
-  assert.match(reservationNode.parameters.jsonBody, /increment/);
+  assert.equal(reservationNode.parameters.method, "PATCH");
+  assert.match(reservationNode.parameters.url, /automationQuota/);
+  assert.match(reservationNode.parameters.url, /quota\.date/);
+  assert.match(reservationNode.parameters.jsonBody, /quota\.used/);
+  assert.match(reservationNode.parameters.jsonBody, /dailyLimit/);
   assert.equal(reservationNode.onError, "continueErrorOutput");
   assert.deepEqual(workflow.connections["Reserve daily quota slot"].main[1], [
-    { node: "Send limit email", type: "main", index: 0 },
+    { node: "Label failed email", type: "main", index: 0 },
   ]);
 });
 

@@ -176,7 +176,7 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $json.senderEmail }}",
+        "sendTo": "={{ $('Extract email request').item.json.senderEmail }}",
         "subject": "Join daily request limit reached",
         "message": "The daily 10-request automation limit has been reached. Your email can still be reviewed manually by the team.",
         "options": {}
@@ -218,8 +218,8 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://firestore.googleapis.com/v1/projects/join-issue-collector-b5f54/databases/(default)/documents:commit",
+        "method": "PATCH",
+        "url": "={{ 'https://firestore.googleapis.com/v1/projects/join-issue-collector-b5f54/databases/(default)/documents/automationQuota/' + $('Check daily request limit').item.json.quota.date }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -231,7 +231,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ writes: [{ update: { name: 'projects/join-issue-collector-b5f54/databases/(default)/documents/automationQuota/' + $('Check daily request limit').item.json.quota.date, fields: { date: { stringValue: $('Check daily request limit').item.json.quota.date }, dailyLimit: { integerValue: String($('Check daily request limit').item.json.quota.dailyLimit) }, updatedAt: { timestampValue: new Date().toISOString() } } }, updateMask: { fieldPaths: ['date', 'dailyLimit', 'updatedAt'] }, updateTransforms: [{ fieldPath: 'used', increment: { integerValue: '1' } }] }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ fields: { date: { stringValue: $('Check daily request limit').item.json.quota.date }, used: { integerValue: String($('Check daily request limit').item.json.quota.used) }, dailyLimit: { integerValue: String($('Check daily request limit').item.json.quota.dailyLimit) }, updatedAt: { timestampValue: new Date().toISOString() } } }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -686,7 +686,7 @@
         ],
         [
           {
-            "node": "Send limit email",
+            "node": "Label failed email",
             "type": "main",
             "index": 0
           }

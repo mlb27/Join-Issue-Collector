@@ -44,7 +44,7 @@ test("exposes only validated daily quota documents to the public page", () => {
   assert.match(firestoreRules, /data\.date == quotaId/);
   assert.match(firestoreRules, /data\.used <= 10/);
   assert.match(firestoreRules, /allow create: if isN8nBot\(\)/);
-  assert.match(firestoreRules, /request\.resource\.data\.used == 1/);
+  assert.match(firestoreRules, /request\.resource\.data\.used >= 1/);
   assert.match(firestoreRules, /allow update: if isN8nBot\(\)/);
   assert.match(firestoreRules, /request\.resource\.data\.used == resource\.data\.used \+ 1/);
   assert.match(firestoreRules, /allow delete: if false/);
