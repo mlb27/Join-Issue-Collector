@@ -37,7 +37,11 @@ Firebase-backed board, contacts and task data.
 
 ## Live Demo
 
-No public deployment URL is configured for this fork yet.
+[Open Join Issue Collector](https://moritz-boehm.developerakademie.net/join-issue-collector/)
+
+The public entry page lets visitors choose between the stakeholder request
+journey and member access. The stakeholder page is also available directly at
+[stakeholder.html](https://moritz-boehm.developerakademie.net/join-issue-collector/stakeholder.html).
 
 ## Preview
 
@@ -127,7 +131,7 @@ paths are documented in
 - A local or hosted n8n instance for the email collector workflow
 - A chat model reachable from n8n for issue classification
 
-When a hosted demo is available, it can be opened without a local installation.
+The hosted demo can be opened without a local installation.
 
 ## Quickstart
 
@@ -446,9 +450,16 @@ node --test
 
 ## Deployment
 
-The repository currently contains Firestore configuration but no Firebase
-Hosting target. The static frontend can be served by Firebase Hosting or
-another HTTPS-capable static host after its deployment configuration is added.
+The static frontend is deployed through the Developer Akademie FTP host at:
+
+~~~text
+https://moritz-boehm.developerakademie.net/join-issue-collector/
+~~~
+
+The deployment serves the same static HTML, CSS, JavaScript and assets as the
+repository. Its ignored firebaseConfig.js contains the production Firebase
+web configuration and the production n8n status webhook URL; private secrets
+remain outside version control.
 
 Before deployment, configure the production domain in Firebase Authentication,
 set the production status-webhook URL only in the deployment's untracked
